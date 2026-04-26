@@ -50,8 +50,10 @@ export default function ChoreTemplatesSection({ templates, kids, familyId }: Pro
   }
 
   function toggleDay(day: number) {
-    const days = form.recurrence.days ?? [];
-    setForm((f) => ({ ...f, recurrence: { type: "custom", days: days.includes(day) ? days.filter((d) => d !== day) : [...days, day] } }));
+    setForm((f) => {
+      const days = f.recurrence.days ?? [];
+      return { ...f, recurrence: { type: "custom", days: days.includes(day) ? days.filter((d) => d !== day) : [...days, day] } };
+    });
   }
 
   function toggleMember(id: string) {
