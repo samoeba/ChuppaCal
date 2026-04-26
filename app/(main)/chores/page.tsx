@@ -84,7 +84,8 @@ export default async function ChoresPage() {
     templatesByMember[kid.id] = allTemplates.filter((t) => ids.includes(t.id));
   }
 
-  const pinHash = (family as any)?.settings?.pin_hash ?? "0000";
+  type FamilyRow = { settings: { pin_hash: string | null } };
+  const pinHash = ((family as FamilyRow | null)?.settings?.pin_hash) ?? "0000";
 
   return (
     <ChoresBoard
