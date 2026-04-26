@@ -64,4 +64,13 @@ create policy "family manage template members"
       select id from public.chore_templates
       where family_id = (select family_id from public.family_members where user_id = auth.uid() limit 1)
     )
+  )
+  with check (
+    template_id in (
+      select id from public.chore_templates
+      where family_id = (select family_id from public.family_members where user_id = auth.uid() limit 1)
+    )
   );
+
+create index idx_chore_template_members_member
+  on public.chore_template_members(member_id);
