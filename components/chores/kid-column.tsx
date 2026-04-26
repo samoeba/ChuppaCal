@@ -81,7 +81,7 @@ export default function KidColumn({
         )}
         {view === "week" && (
           <WeekView
-            kid={kid} allTemplates={allTemplates} completionsWeek={completionsWeek}
+            allTemplates={allTemplates} completionsWeek={completionsWeek}
             today={today} weekStartStr={weekStartStr}
           />
         )}

@@ -1,10 +1,10 @@
+import type { ReactNode } from "react";
 import { isScheduledToday, toDateString } from "@/lib/chores";
-import type { ChoreCompletion, ChoreTemplate, FamilyMember } from "@/lib/types";
+import type { ChoreCompletion, ChoreTemplate } from "@/lib/types";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 interface WeekViewProps {
-  kid: FamilyMember;
   allTemplates: ChoreTemplate[];
   completionsWeek: ChoreCompletion[];
   today: string;
@@ -66,7 +66,7 @@ export default function WeekView({ allTemplates, completionsWeek, today, weekSta
                 const isPast = dateStr < today;
                 const isToday = dateStr === today;
 
-                let cell: React.ReactNode;
+                let cell: ReactNode;
                 if (!scheduled) {
                   cell = <span className="text-slate-200">·</span>;
                 } else if (done) {
