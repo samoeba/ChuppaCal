@@ -29,8 +29,11 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
       stars_spent: pendingReward.star_cost,
     };
     onRedeem(r);
-    await redeemReward(pendingReward.id, kid.id, familyId, pendingReward.star_cost);
-    setPendingReward(null);
+    try {
+      await redeemReward(pendingReward.id, kid.id, familyId, pendingReward.star_cost);
+    } finally {
+      setPendingReward(null);
+    }
   }
 
   return (
