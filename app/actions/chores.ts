@@ -65,9 +65,10 @@ export async function createChoreTemplate(
     .single();
   if (error || !template) throw new Error(error?.message ?? "insert failed");
   if (memberIds.length > 0) {
-    await supabase.from("chore_template_members").insert(
+    const { error: membersError } = await supabase.from("chore_template_members").insert(
       memberIds.map((mid) => ({ template_id: template.id, member_id: mid }))
     );
+    if (membersError) throw new Error(membersError.message);
   }
   revalidatePath("/chores");
   revalidatePath("/settings");
@@ -79,12 +80,15 @@ export async function updateChoreTemplate(
   memberIds: string[]
 ) {
   const supabase = await createClient();
-  await supabase.from("chore_templates").update(data).eq("id", templateId);
-  await supabase.from("chore_template_members").delete().eq("template_id", templateId);
+  const { error: updateError } = await supabase.from("chore_templates").update(data).eq("id", templateId);
+  if (updateError) throw new Error(updateError.message);
+  const { error: deleteError } = await supabase.from("chore_template_members").delete().eq("template_id", templateId);
+  if (deleteError) throw new Error(deleteError.message);
   if (memberIds.length > 0) {
-    await supabase.from("chore_template_members").insert(
+    const { error: insertError } = await supabase.from("chore_template_members").insert(
       memberIds.map((mid) => ({ template_id: templateId, member_id: mid }))
     );
+    if (insertError) throw new Error(insertError.message);
   }
   revalidatePath("/chores");
   revalidatePath("/settings");
@@ -92,7 +96,8 @@ export async function updateChoreTemplate(
 
 export async function deleteChoreTemplate(templateId: string) {
   const supabase = await createClient();
-  await supabase.from("chore_templates").update({ active: false }).eq("id", templateId);
+  const { error } = await supabase.from("chore_templates").update({ active: false }).eq("id", templateId);
+  if (error) throw new Error(error.message);
   revalidatePath("/chores");
   revalidatePath("/settings");
 }
@@ -109,19 +114,22 @@ export async function createStarReward(
 
 export async function updateStarReward(rewardId: string, data: { name: string; emoji: string; star_cost: number }) {
   const supabase = await createClient();
-  await supabase.from("star_rewards").update(data).eq("id", rewardId);
+  const { error } = await supabase.from("star_rewards").update(data).eq("id", rewardId);
+  if (error) throw new Error(error.message);
   revalidatePath("/settings");
 }
 
 export async function deleteStarReward(rewardId: string) {
   const supabase = await createClient();
-  await supabase.from("star_rewards").delete().eq("id", rewardId);
+  const { error } = await supabase.from("star_rewards").delete().eq("id", rewardId);
+  if (error) throw new Error(error.message);
   revalidatePath("/settings");
 }
 
 export async function toggleChoresEnabled(memberId: string, enabled: boolean) {
   const supabase = await createClient();
-  await supabase.from("family_members").update({ chores_enabled: enabled }).eq("id", memberId);
+  const { error } = await supabase.from("family_members").update({ chores_enabled: enabled }).eq("id", memberId);
+  if (error) throw new Error(error.message);
   revalidatePath("/chores");
   revalidatePath("/settings");
 }
