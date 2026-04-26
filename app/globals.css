@@ -1,26 +1,173 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* =========================================================
+ * Robuck Rounded — display font, self-hosted.
+ * Drop the licensed file into public/fonts/RobuckRounded.woff2
+ * (a .ttf or .otf fallback also works; update the url() + format)
+ * ========================================================= */
+@font-face {
+  font-family: "Robuck Rounded";
+  src: url("/fonts/RobuckRounded.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
+/* =========================================================
+ * ChuppaCal design tokens
+ * ========================================================= */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* ---- Neutrals ---- */
+  --color-cc-beige: #F3EFE0;
+  --color-cc-cream: #FAF6E8;
+  --color-cc-ink: #1C1A14;
+  --color-cc-ink-dim: #1C1A14B3;
+  --color-cc-line: #1C1A1414;
+  --color-cc-white: #FFFFFF;
+
+  /* ---- Family palette (triads: primary / soft / deep) ---- */
+  --color-sun: #FDCB40;
+  --color-sun-soft: #FFF2B7;
+  --color-sun-deep: #8A5E00;
+
+  --color-sky: #2668FD;
+  --color-sky-soft: #CFE0FF;
+  --color-sky-deep: #0B2E7A;
+
+  --color-clover: #00B351;
+  --color-clover-soft: #A7EB98;
+  --color-clover-deep: #005C00;
+
+  --color-coral: #FD4401;
+  --color-coral-soft: #FFCCCD;
+  --color-coral-deep: #AE0C36;
+
+  --color-petal: #F780D4;
+  --color-petal-soft: #F5CBFF;
+  --color-petal-deep: #5D2B75;
+
+  --color-lagoon: #2CD1D0;
+  --color-lagoon-soft: #B9ECEA;
+  --color-lagoon-deep: #0E5E5D;
+
+  --color-plum: #6B3088;
+
+  /* ---- Status (aliases onto palette) ---- */
+  --color-cc-success: #00B351;
+  --color-cc-warning: #FDCB40;
+  --color-cc-urgent: #AE0C36;
+  --color-cc-info: #2668FD;
+
+  /* ---- Radius ---- */
+  --radius-cc-xs: 0.3125rem;
+  --radius-cc-sm: 0.625rem;
+  --radius-cc-md: 1rem;
+  --radius-cc-lg: 2.1875rem;
+  --radius-cc-pill: 3.125rem;
+
+  /* ---- Fonts ---- */
+  --font-display: "Robuck Rounded", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-national-park), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+  --font-sans: var(--font-national-park), ui-sans-serif, system-ui, sans-serif;
+
+  /* ---- Motion ---- */
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =========================================================
+ * Base
+ * ========================================================= */
+:root {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cc-beige);
+  color: var(--color-cc-ink);
+  font-family: var(--font-body);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+
+  /* Touch optimizations for wall-mounted display */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+}
+
+/* Prevent double-tap zoom on interactive elements */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* Prevent text selection on non-input elements */
+*:not(input):not(textarea):not([contenteditable="true"]) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
+/* =========================================================
+ * Typography utility classes
+ * (Usage: <h1 class="text-display-xl">…</h1>)
+ * Display sizes are uppercase by convention — approved.
+ * ========================================================= */
+.text-display-xl,
+.text-display-lg,
+.text-display-md {
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  margin-bottom: -0.1em;
+}
+.text-display-xl { font-size: 9rem;   line-height: 0.85; }
+.text-display-lg { font-size: 5rem;   line-height: 0.9;  }
+.text-display-md { font-size: 3rem;   line-height: 0.95; }
+
+.text-heading-lg { font-family: var(--font-body); font-size: 2rem;    line-height: 1.1;  font-weight: 600; letter-spacing: -0.01em; }
+.text-heading-md { font-family: var(--font-body); font-size: 1.5rem;  line-height: 1.15; font-weight: 600; letter-spacing: -0.01em; }
+.text-body-lg    { font-family: var(--font-body); font-size: 1.25rem; line-height: 1.3;  font-weight: 500; letter-spacing: -0.01em; }
+.text-body       { font-family: var(--font-body); font-size: 1rem;    line-height: 1.35; font-weight: 500; letter-spacing: -0.01em; }
+.text-caption    { font-family: var(--font-body); font-size: 0.875rem; line-height: 1.3; font-weight: 500; color: var(--color-cc-ink-dim); }
+.text-label      { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* =========================================================
+ * Keyframes
+ * ========================================================= */
+
+/* Shake for wrong PIN */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+.animate-shake { animation: shake 0.5s ease-in-out; }
+
+/* Horizontal cloud drift (ambient / screensaver) */
+@keyframes cloud-drift {
+  0%   { transform: translateX(-20vw); }
+  100% { transform: translateX(120vw); }
+}
+.animate-cloud-drift         { animation: cloud-drift 20s linear infinite; }
+.animate-cloud-drift-25      { animation: cloud-drift 25s linear infinite; }
+.animate-cloud-drift-35      { animation: cloud-drift 35s linear infinite; }
+.animate-cloud-drift-45      { animation: cloud-drift 45s linear infinite; }
+.animate-cloud-drift-reverse { animation-direction: reverse; }
+
+/* Smooth touch scrolling helper */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
