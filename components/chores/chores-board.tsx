@@ -67,10 +67,11 @@ export default function ChoresBoard({
     );
   }
 
+  const todayDate = new Date(today + "T00:00:00");
+
   return (
     <div className="flex gap-4 h-full p-4">
       {kids.map((kid) => {
-        const todayDate = new Date(today + "T00:00:00");
         return (
           <KidColumn
             key={kid.id}
