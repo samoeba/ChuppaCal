@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PinGate from "@/components/pin-gate";
-import type { CalendarConnection, Family, FamilyMember } from "@/lib/types";
+import type { CalendarConnection, ChoreTemplate, ChoreTemplateMember, Family, FamilyMember, StarReward } from "@/lib/types";
 import ChoreTemplatesSection from "@/components/settings/chore-templates-section";
 import StarRewardsSection from "@/components/settings/star-rewards-section";
 import { toggleChoresEnabled } from "@/app/actions/chores";
-import type { ChoreTemplate, ChoreTemplateMember, StarReward } from "@/lib/types";
 
 const COLORS = [
   "#4ecdc4", "#ff6b6b", "#a78bfa", "#ffd93d",
@@ -46,72 +45,78 @@ export default function SettingsPage() {
   }, []);
 
   async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const { data: member } = await supabase
-      .from("family_members")
-      .select("family_id")
-      .eq("user_id", user.id)
-      .single();
+      const { data: member } = await supabase
+        .from("family_members")
+        .select("family_id")
+        .eq("user_id", user.id)
+        .single();
 
-    if (!member) return;
+      if (!member) return;
 
-    const { data: familyData } = await supabase
-      .from("families")
-      .select("*")
-      .eq("id", member.family_id)
-      .single();
+      const { data: familyData } = await supabase
+        .from("families")
+        .select("*")
+        .eq("id", member.family_id)
+        .single();
 
-    const { data: membersData } = await supabase
-      .from("family_members")
-      .select("*")
-      .eq("family_id", member.family_id)
-      .order("created_at");
+      const { data: membersData } = await supabase
+        .from("family_members")
+        .select("*")
+        .eq("family_id", member.family_id)
+        .order("created_at");
 
-    const { data: connectionsData } = await supabase
-      .from("calendar_connections")
-      .select("*")
-      .eq("family_id", member.family_id)
-      .order("created_at");
+      const { data: connectionsData } = await supabase
+        .from("calendar_connections")
+        .select("*")
+        .eq("family_id", member.family_id)
+        .order("created_at");
 
-    if (connectionsData) setConnections(connectionsData);
+      if (connectionsData) setConnections(connectionsData);
 
-    if (familyData) {
-      setFamily(familyData);
-      setWeatherLocation(familyData.settings?.weather_location ?? "");
+      if (familyData) {
+        setFamily(familyData);
+        setWeatherLocation(familyData.settings?.weather_location ?? "");
+      }
+      if (membersData) setMembers(membersData);
+
+      const { data: templatesData } = await supabase
+        .from("chore_templates")
+        .select("*")
+        .eq("family_id", member.family_id)
+        .eq("active", true)
+        .order("created_at");
+
+      const templateIds = (templatesData ?? []).map((t: ChoreTemplate) => t.id);
+      const { data: templateMembersData } = templateIds.length > 0
+        ? await supabase
+            .from("chore_template_members")
+            .select("*")
+            .in("template_id", templateIds)
+        : { data: [] };
+
+      const { data: rewardsData } = await supabase
+        .from("star_rewards")
+        .select("*")
+        .eq("family_id", member.family_id)
+        .order("star_cost");
+
+      const allTMs = (templateMembersData ?? []) as ChoreTemplateMember[];
+      if (templatesData) {
+        setTemplates(
+          (templatesData as ChoreTemplate[]).map((t) => ({
+            ...t,
+            memberIds: allTMs.filter((tm) => tm.template_id === t.id).map((tm) => tm.member_id),
+          }))
+        );
+      }
+      if (rewardsData) setRewards(rewardsData as StarReward[]);
+    } finally {
+      setLoading(false);
     }
-    if (membersData) setMembers(membersData);
-
-    const { data: templatesData } = await supabase
-      .from("chore_templates")
-      .select("*")
-      .eq("family_id", member.family_id)
-      .eq("active", true)
-      .order("created_at");
-
-    const { data: templateMembersData } = await supabase
-      .from("chore_template_members")
-      .select("*");
-
-    const { data: rewardsData } = await supabase
-      .from("star_rewards")
-      .select("*")
-      .eq("family_id", member.family_id)
-      .order("star_cost");
-
-    const allTMs = (templateMembersData ?? []) as ChoreTemplateMember[];
-    if (templatesData) {
-      setTemplates(
-        (templatesData as ChoreTemplate[]).map((t) => ({
-          ...t,
-          memberIds: allTMs.filter((tm) => tm.template_id === t.id).map((tm) => tm.member_id),
-        }))
-      );
-    }
-    if (rewardsData) setRewards(rewardsData as StarReward[]);
-
-    setLoading(false);
   }
 
   async function updateConnection(id: string, fields: Partial<CalendarConnection>) {
