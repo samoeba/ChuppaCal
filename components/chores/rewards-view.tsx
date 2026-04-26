@@ -20,17 +20,17 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
 
   async function handleRedeem() {
     if (!pendingReward) return;
-    const r: StarRedemption = {
-      id: crypto.randomUUID(),
-      reward_id: pendingReward.id,
-      member_id: kid.id,
-      family_id: familyId,
-      redeemed_at: new Date().toISOString(),
-      stars_spent: pendingReward.star_cost,
-    };
-    onRedeem(r);
     try {
       await redeemReward(pendingReward.id, kid.id, familyId, pendingReward.star_cost);
+      const r: StarRedemption = {
+        id: crypto.randomUUID(),
+        reward_id: pendingReward.id,
+        member_id: kid.id,
+        family_id: familyId,
+        redeemed_at: new Date().toISOString(),
+        stars_spent: pendingReward.star_cost,
+      };
+      onRedeem(r);
     } finally {
       setPendingReward(null);
     }

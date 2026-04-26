@@ -76,8 +76,11 @@ export default async function ChoresPage() {
     supabase.from("families").select("settings").eq("id", familyId).single(),
   ]);
 
-  const allTMs = (templateMembers ?? []) as ChoreTemplateMember[];
   const allTemplates = (templates ?? []) as ChoreTemplate[];
+  const familyTemplateIds = new Set(allTemplates.map((t) => t.id));
+  const allTMs = ((templateMembers ?? []) as ChoreTemplateMember[]).filter(
+    (tm) => familyTemplateIds.has(tm.template_id)
+  );
   const templatesByMember: Record<string, ChoreTemplate[]> = {};
   for (const kid of members ?? []) {
     const ids = allTMs.filter((tm) => tm.member_id === kid.id).map((tm) => tm.template_id);
