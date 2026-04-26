@@ -1,3 +1,5 @@
+"use client";
+
 import ChoreRow from "@/components/chores/chore-row";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember } from "@/lib/types";
 

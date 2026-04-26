@@ -53,8 +53,12 @@ export default function ChoreRow({
 
   async function performUndo() {
     onUncomplete(template.id, kid.id);
-    await uncompleteChore(template.id, kid.id, today);
-    setShowUndo(false);
+    try {
+      await uncompleteChore(template.id, kid.id, today);
+      setShowUndo(false);
+    } catch {
+      if (completion) onComplete(completion);
+    }
   }
 
   return (
@@ -82,7 +86,12 @@ export default function ChoreRow({
       </div>
 
       {showUndo && (
-        <PinGate familyPin={familyPin} message={`Undo "${template.name}" for ${kid.name}?`} onVerified={performUndo}>
+        <PinGate
+          familyPin={familyPin}
+          message={`Undo "${template.name}" for ${kid.name}?`}
+          onVerified={performUndo}
+          onCancel={() => setShowUndo(false)}
+        >
           <div />
         </PinGate>
       )}
