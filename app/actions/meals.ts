@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { MealPlan, MealSlot } from "@/lib/types";
+import type { FamilySettings, MealPlan, MealSlot } from "@/lib/types";
 
 export async function setMeal(
   familyId: string,
@@ -11,6 +11,7 @@ export async function setMeal(
   name: string,
   emoji: string | null
 ): Promise<MealPlan> {
+  if (!name.trim()) throw new Error("name is required");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("meal_plans")
@@ -43,7 +44,7 @@ export async function updateMealSlots(
     .eq("id", familyId)
     .single();
   if (fetchError || !family) throw new Error(fetchError?.message ?? "family not found");
-  const nextSettings = { ...(family as { settings: Record<string, unknown> }).settings, meal_slots: slots };
+  const nextSettings: FamilySettings = { ...(family.settings as FamilySettings), meal_slots: slots };
   const { error } = await supabase
     .from("families")
     .update({ settings: nextSettings })
