@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { MealPlan, MealSlot } from "@/lib/types";
 import WeekNav from "./week-nav";
 import MealGrid from "./meal-grid";
+import MealModal from "./meal-modal";
 
 interface Props {
   meals: MealPlan[];
@@ -80,20 +81,15 @@ export default function MealBoard({ meals, mealSlots, familyId, weekStartStr }: 
         onCellTap={handleCellTap}
       />
       {selectedCell && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <p className="text-sm text-[var(--cc-ink)]/50 mb-2">
-              {selectedCell.slot} · {selectedCell.date}
-            </p>
-            <p className="text-[var(--cc-ink)]">MealModal coming in next task</p>
-            <button
-              onClick={() => setSelectedCell(null)}
-              className="mt-4 w-full bg-slate-100 py-3 rounded-xl font-semibold touch-manipulation"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <MealModal
+          date={selectedCell.date}
+          slot={selectedCell.slot}
+          meal={selectedCell.meal}
+          familyId={familyId}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          onClose={() => setSelectedCell(null)}
+        />
       )}
     </div>
   );
