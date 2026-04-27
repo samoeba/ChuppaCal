@@ -67,8 +67,14 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl p-6 w-full max-w-sm"
+      >
         <p className="text-sm font-semibold text-cc-ink/50 mb-2">
           {SLOT_LABELS[slot]} · {dateLabel}
         </p>
