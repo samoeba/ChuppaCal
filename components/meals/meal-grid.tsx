@@ -30,7 +30,7 @@ export default function MealGrid({ meals, mealSlots, weekDays, todayStr, onCellT
 
   if (enabledSlots.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[var(--cc-ink)]/40 text-sm">
+      <div className="flex-1 flex items-center justify-center text-cc-ink/40 text-sm">
         No meal slots enabled. Turn them on in Settings.
       </div>
     );
@@ -48,8 +48,8 @@ export default function MealGrid({ meals, mealSlots, weekDays, todayStr, onCellT
             key={date}
             className={`text-center text-xs font-semibold py-2 rounded-lg ${
               date === todayStr
-                ? "bg-[var(--sky)]/20 text-[var(--sky)]"
-                : "text-[var(--cc-ink)]/50"
+                ? "bg-sky/20 text-sky"
+                : "text-cc-ink/50"
             }`}
           >
             {DAY_LABELS[i]}
@@ -67,7 +67,7 @@ export default function MealGrid({ meals, mealSlots, weekDays, todayStr, onCellT
           className="grid gap-1 mb-1"
           style={{ gridTemplateColumns: `72px repeat(7, 1fr)` }}
         >
-          <div className="text-[10px] font-semibold text-[var(--cc-ink)]/40 flex items-center uppercase tracking-wide px-1">
+          <div className="text-[10px] font-semibold text-cc-ink/40 flex items-center uppercase tracking-wide px-1">
             {SLOT_LABELS[slot]}
           </div>
           {weekDays.map((date) => {

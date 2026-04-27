@@ -49,7 +49,7 @@ export default function MealSlotsSection({ familyId, initialSlots }: Props) {
               aria-checked={slots[slot]}
               onClick={() => handleToggle(slot)}
               className={`relative w-12 h-6 rounded-full transition-colors touch-manipulation ${
-                slots[slot] ? "bg-[var(--clover)]" : "bg-slate-200"
+                slots[slot] ? "bg-clover" : "bg-slate-200"
               }`}
             >
               <span

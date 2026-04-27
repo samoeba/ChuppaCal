@@ -69,7 +69,7 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-        <p className="text-sm font-semibold text-[var(--cc-ink)]/50 mb-2">
+        <p className="text-sm font-semibold text-cc-ink/50 mb-2">
           {SLOT_LABELS[slot]} · {dateLabel}
         </p>
 
@@ -80,10 +80,10 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
           placeholder="What's cooking?"
           autoFocus
-          className="w-full border border-slate-200 rounded-xl px-4 py-3 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-[var(--sky)]"
+          className="w-full border border-slate-200 rounded-xl px-4 py-3 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-sky"
         />
 
-        <p className="text-sm text-[var(--cc-ink)]/50 mb-2">Emoji (optional)</p>
+        <p className="text-sm text-cc-ink/50 mb-2">Emoji (optional)</p>
         <div className="flex flex-wrap gap-2 mb-5">
           {FOOD_EMOJIS.map((e) => (
             <button
@@ -91,7 +91,7 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
               onClick={() => setEmoji(emoji === e ? null : e)}
               className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center touch-manipulation ${
                 emoji === e
-                  ? "bg-slate-200 ring-2 ring-[var(--sky)]"
+                  ? "bg-slate-200 ring-2 ring-sky"
                   : "bg-slate-50 active:bg-slate-100"
               }`}
             >
@@ -122,7 +122,7 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
           <button
             onClick={handleSave}
             disabled={!name.trim() || saving}
-            className="flex-1 bg-[var(--sky)] text-white py-3 rounded-xl font-semibold touch-manipulation disabled:opacity-50"
+            className="flex-1 bg-sky text-white py-3 rounded-xl font-semibold touch-manipulation disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
           </button>

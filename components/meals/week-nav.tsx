@@ -22,20 +22,20 @@ export default function WeekNav({ weekStartStr, onPrev, onNext, onCurrentWeek }:
       <button
         onClick={onPrev}
         aria-label="Previous week"
-        className="w-10 h-10 flex items-center justify-center rounded-xl bg-[var(--cc-cream)] text-[var(--cc-ink)] text-lg font-semibold touch-manipulation active:opacity-70"
+        className="w-10 h-10 flex items-center justify-center rounded-xl bg-cc-cream text-cc-ink text-lg font-semibold touch-manipulation active:opacity-70"
       >
         ←
       </button>
       <button
         onClick={onCurrentWeek}
-        className="flex-1 text-center font-semibold text-[var(--cc-ink)] touch-manipulation active:opacity-70"
+        className="flex-1 text-center font-semibold text-cc-ink touch-manipulation active:opacity-70"
       >
         {formatWeekLabel(weekStartStr)}
       </button>
       <button
         onClick={onNext}
         aria-label="Next week"
-        className="w-10 h-10 flex items-center justify-center rounded-xl bg-[var(--cc-cream)] text-[var(--cc-ink)] text-lg font-semibold touch-manipulation active:opacity-70"
+        className="w-10 h-10 flex items-center justify-center rounded-xl bg-cc-cream text-cc-ink text-lg font-semibold touch-manipulation active:opacity-70"
       >
         →
       </button>
