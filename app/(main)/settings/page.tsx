@@ -6,6 +6,7 @@ import PinGate from "@/components/pin-gate";
 import type { CalendarConnection, ChoreTemplate, ChoreTemplateMember, Family, FamilyMember, StarReward } from "@/lib/types";
 import ChoreTemplatesSection from "@/components/settings/chore-templates-section";
 import StarRewardsSection from "@/components/settings/star-rewards-section";
+import MealSlotsSection from "@/components/settings/meal-slots-section";
 import { toggleChoresEnabled } from "@/app/actions/chores";
 
 const COLORS = [
@@ -374,6 +375,18 @@ export default function SettingsPage() {
         />
 
         <StarRewardsSection rewards={rewards} familyId={family.id} />
+
+        <MealSlotsSection
+          familyId={family.id}
+          initialSlots={
+            family.settings?.meal_slots ?? {
+              breakfast: true,
+              lunch: true,
+              dinner: true,
+              snack: false,
+            }
+          }
+        />
 
         {/* Display / Weather */}
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
