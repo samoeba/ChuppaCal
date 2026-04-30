@@ -40,7 +40,7 @@ export default function MealGrid({ meals, mealSlots, weekDays, todayStr, onCellT
     <div className="flex-1 overflow-auto px-2 pb-4">
       <div
         className="grid gap-1 mb-1"
-        style={{ gridTemplateColumns: `72px repeat(7, 1fr)` }}
+        style={{ gridTemplateColumns: `24px repeat(7, 1fr)` }}
       >
         <div />
         {weekDays.map((date, i) => (
@@ -65,10 +65,12 @@ export default function MealGrid({ meals, mealSlots, weekDays, todayStr, onCellT
         <div
           key={slot}
           className="grid gap-1 mb-1"
-          style={{ gridTemplateColumns: `72px repeat(7, 1fr)` }}
+          style={{ gridTemplateColumns: `24px repeat(7, 1fr)` }}
         >
-          <div className="text-[10px] font-semibold text-cc-ink/40 flex items-center uppercase tracking-wide px-1">
-            {SLOT_LABELS[slot]}
+          <div className="flex items-center justify-center">
+            <span className="text-[10px] font-semibold text-cc-ink/40 uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
+              {SLOT_LABELS[slot]}
+            </span>
           </div>
           {weekDays.map((date) => {
             const meal = mealIndex.get(`${date}|${slot}`);
