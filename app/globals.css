@@ -175,11 +175,11 @@ textarea,
 /* On-screen keyboard — pencil design (research/ChuppaCal-Keyboard_pencil-design.jpg).
    Cream tray, round black alpha keys with white caps, family-color punctuation
    accents, three pill keys on the bottom row (sky 123 / ink space / coral del).
-   Robuck Rounded throughout for that warm playful kitchen-object feel. */
+   National Park body font for the keys. */
 .simple-keyboard {
   background: var(--color-cc-cream);
   border-radius: var(--radius-cc-lg);
-  font-family: var(--font-display, var(--font-national-park));
+  font-family: var(--font-body);
   padding: 1rem;
   height: 100%;
 }
@@ -193,28 +193,31 @@ textarea,
   display: flex;
   gap: 0.45rem;
   flex: 1;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Default key: round black "typewriter" key with cream caps */
+/* Default key: perfect circle, ink with cream cap, National Park body */
 .simple-keyboard .hg-button {
   background: var(--color-cc-ink);
   color: var(--color-cc-cream);
   border: none;
   border-radius: 9999px;
-  font-family: var(--font-display, var(--font-national-park));
-  font-size: 1.75rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  flex: 1;
-  min-height: 48px;
+  font-family: var(--font-body);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  flex: 0 0 auto;
+  height: 100%;
+  aspect-ratio: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.08s ease-out, background-color 0.1s;
+  transition: transform 0.08s ease-out, background-color 0.1s, filter 0.1s;
 }
 .simple-keyboard .hg-button:active,
 .simple-keyboard .hg-activeButton {
@@ -248,16 +251,21 @@ textarea,
   color: var(--color-cc-cream);
 }
 
-/* Bottom-row pills */
+/* Bottom-row pills — override circle defaults to stretch horizontally */
+.simple-keyboard .hg-button.tk-key-numpad,
+.simple-keyboard .hg-button.tk-key-space,
+.simple-keyboard .hg-button.tk-key-del {
+  aspect-ratio: auto;
+}
 .simple-keyboard .hg-button.tk-key-numpad {
   background: var(--color-sky);
   color: var(--color-cc-cream);
-  flex: 1.6;
+  flex: 1.5 1 0;
   font-size: 1.25rem;
   letter-spacing: 0.05em;
 }
 .simple-keyboard .hg-button.tk-key-space {
-  flex: 7;
+  flex: 7 1 0;
   font-size: 2rem;
   font-weight: 700;
   padding-bottom: 0.5rem;
@@ -266,7 +274,7 @@ textarea,
 .simple-keyboard .hg-button.tk-key-del {
   background: var(--color-coral);
   color: var(--color-cc-cream);
-  flex: 1.6;
+  flex: 1.5 1 0;
   font-size: 1.25rem;
   letter-spacing: 0.05em;
 }
