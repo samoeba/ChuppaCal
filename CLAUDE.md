@@ -34,7 +34,7 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
 - `useSearchParams()` must be wrapped in `<Suspense>`
 - Layouts are static by default — auth checks go in leaf components
 
-## Current Status — PAUSED DURING PHASE 4
+## Current Status — PHASE 7 IN PROGRESS (Phase 4 also paused mid-stream)
 
 ### ✅ Completed
 - **Phase 1: Project Scaffolding & Database**
@@ -58,7 +58,18 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
   - Touch-optimized global CSS (manipulation, no text select, tap highlight)
   - Settings page wrapped in `<PinGate>`
 
-### 🔲 Next Up: Phase 4 — Calendar
+- **Phase 6: Meal Planning** (v1 spec complete)
+  - Weekly grid (7 days × 4 slots) with today highlight
+  - Meal CRUD modal with emoji picker
+  - Slot toggles in Settings (enable/disable breakfast/lunch/dinner/snack)
+  - Full Supabase integration with RLS on `meal_plans` table
+  - Recipe linking and Claude-powered ingredient suggestions intentionally deferred (out of scope for v1; depends on Phase 9)
+
+### 🚧 In Progress: Phase 7 — Lists
+- Columns (named lists), items, drag-to-reorder
+- Will later integrate with Phase 9 voice ("add milk to grocery")
+
+### 🔲 Paused: Phase 4 — Calendar
 1. Google Calendar connection in Settings (OAuth scopes for Calendar API)
 2. Hey Calendar (CalDAV) connection in Settings
 3. Sync engine (Vercel Cron: `/api/cron/sync-calendars`)
@@ -67,9 +78,7 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
 6. Weather integration (OpenWeatherMap)
 
 ### 🔲 Remaining Phases
-- Phase 5: Chores (templates, assignments, tap-to-complete, star rewards)
-- Phase 6: Meal Planning (weekly grid, togglable meal slots)
-- Phase 7: Lists (columns, items, drag reorder)
+- Phase 5: Chores (templates, assignments, tap-to-complete, star rewards) — migration `003_chores_restructure.sql` written but not yet applied to Supabase
 - Phase 8: Screensaver, Sleep Mode & Pi kiosk setup
 - Phase 9: Voice Assistant (Alexa Custom Skill + Claude AI)
 
