@@ -1,0 +1,175 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { setInputValue } from "@/lib/keyboard/set-input-value";
+import { useKioskMode } from "./use-kiosk-mode";
+import TouchKeyboard, { type KeyEvent } from "./touch-keyboard";
+
+type FocusableInput = HTMLInputElement | HTMLTextAreaElement;
+
+const SUPPORTED_INPUT_TYPES = new Set([
+  "text",
+  "number",
+  "search",
+  "email",
+  "tel",
+  "url",
+]);
+
+function isKeyboardTarget(el: EventTarget | null): el is FocusableInput {
+  if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) {
+    return false;
+  }
+  if (el.disabled || el.readOnly) return false;
+  if (el.dataset.noKeyboard !== undefined) return false;
+  if (el instanceof HTMLInputElement) {
+    const type = el.type || "text";
+    if (!SUPPORTED_INPUT_TYPES.has(type)) return false;
+  }
+  return true;
+}
+
+export default function TouchKeyboardProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const kiosk = useKioskMode();
+  const [focused, setFocused] = useState<FocusableInput | null>(null);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!kiosk) {
+      setFocused(null);
+      return;
+    }
+
+    function onFocusIn(e: FocusEvent) {
+      if (blurTimer.current) {
+        clearTimeout(blurTimer.current);
+        blurTimer.current = null;
+      }
+      if (isKeyboardTarget(e.target)) {
+        setFocused(e.target);
+      } else {
+        setFocused(null);
+      }
+    }
+
+    function onFocusOut() {
+      // Debounce so that focus moving to another registered input keeps
+      // the keyboard up; only clear if focus settles on a non-target.
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+      blurTimer.current = setTimeout(() => {
+        const active = document.activeElement;
+        if (!isKeyboardTarget(active)) setFocused(null);
+      }, 50);
+    }
+
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+    };
+  }, [kiosk]);
+
+  // Scroll the focused input into view when keyboard appears
+  useEffect(() => {
+    if (focused) {
+      focused.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [focused]);
+
+  function handleKey(ev: KeyEvent) {
+    const el = focused;
+    if (!el) return;
+
+    if (ev.kind === "done") {
+      el.blur();
+      return;
+    }
+
+    if (ev.kind === "enter") {
+      // Dispatch an Enter keydown so existing onKeyDown handlers fire
+      // (e.g., meal modal save-on-Enter, list-item save-on-Enter).
+      el.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          code: "Enter",
+          bubbles: true,
+        })
+      );
+      el.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          key: "Enter",
+          code: "Enter",
+          bubbles: true,
+        })
+      );
+      // Hint dismissal — but don't blur, because the Enter handler may
+      // have moved focus elsewhere already (e.g., add-item-bar refocuses
+      // its own input). Let focusout debounce decide.
+      return;
+    }
+
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+
+    let newValue: string;
+    let newCaret: number;
+
+    if (ev.kind === "char") {
+      newValue = el.value.slice(0, start) + ev.char + el.value.slice(end);
+      newCaret = start + ev.char.length;
+    } else if (ev.kind === "backspace") {
+      if (start === end && start > 0) {
+        newValue = el.value.slice(0, start - 1) + el.value.slice(end);
+        newCaret = start - 1;
+      } else if (start !== end) {
+        newValue = el.value.slice(0, start) + el.value.slice(end);
+        newCaret = start;
+      } else {
+        return; // Caret at 0 with no selection — nothing to delete
+      }
+    } else {
+      return;
+    }
+
+    setInputValue(el, newValue);
+    el.setSelectionRange(newCaret, newCaret);
+  }
+
+  return (
+    <>
+      {children}
+      {kiosk && focused && (
+        <>
+          <div
+            onMouseDown={(e) => {
+              // Tap on backdrop dismisses; preventDefault keeps focus on input
+              // momentarily so blur fires cleanly.
+              e.preventDefault();
+              focused.blur();
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              focused.blur();
+            }}
+            className="fixed inset-x-0 top-0 bottom-[40vh] bg-black/20 z-[55]"
+            aria-hidden="true"
+          />
+          <div
+            onMouseDown={(e) => e.preventDefault()}
+            onTouchStart={(e) => e.preventDefault()}
+            className="fixed inset-x-0 bottom-0 z-[60] bg-cc-cream border-t border-slate-200 shadow-2xl"
+            style={{ height: "40vh", minHeight: "260px" }}
+          >
+            <TouchKeyboard onKey={handleKey} />
+          </div>
+        </>
+      )}
+    </>
+  );
+}
