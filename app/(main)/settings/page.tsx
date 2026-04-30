@@ -8,6 +8,7 @@ import ChoreTemplatesSection from "@/components/settings/chore-templates-section
 import StarRewardsSection from "@/components/settings/star-rewards-section";
 import MealSlotsSection from "@/components/settings/meal-slots-section";
 import ListsSection from "@/components/settings/lists-section";
+import KioskModeSection from "@/components/settings/kiosk-mode-section";
 import { toggleChoresEnabled } from "@/app/actions/chores";
 
 const COLORS = [
@@ -399,6 +400,8 @@ export default function SettingsPage() {
         />
 
         <ListsSection initialLists={lists} />
+
+        <KioskModeSection />
 
         {/* Display / Weather */}
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
