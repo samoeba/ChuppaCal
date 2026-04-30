@@ -73,6 +73,15 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
   - Spec: `docs/superpowers/specs/2026-04-30-lists-design.md`; plan: `docs/superpowers/plans/2026-04-30-lists.md`
   - Drag-to-reorder, realtime sync (Lists+Meals+Chores in one PR), and voice integration intentionally deferred
 
+- **Auxiliary: On-Screen Keyboard** (kiosk-mode QWERTY)
+  - Global `<TouchKeyboardProvider>` mounted in `app/layout.tsx`; built on `react-simple-keyboard`, themed via overrides in `app/globals.css`
+  - Activated via `?kiosk=1` URL flag (persisted to `localStorage.chuppacal_kiosk`) or PIN-gated toggle in `/settings`
+  - Auto-shows on focus of text/number/search/email/tel/url `<input>` and `<textarea>`; opt out per-input via `data-no-keyboard`
+  - Press Enter on the keyboard dispatches a real `keydown` so existing save-on-Enter handlers fire; Done blurs the input; backdrop tap dismisses
+  - Phones using the same URL keep their OS keyboard (kiosk flag is per-device)
+  - `.npmrc` enables `legacy-peer-deps=true` because `react-simple-keyboard` declares peerDeps on React ≤18 (works fine with React 19)
+  - Spec: `docs/superpowers/specs/2026-04-30-on-screen-keyboard-design.md`; plan: `docs/superpowers/plans/2026-04-30-on-screen-keyboard.md`
+
 ### 🔲 Paused: Phase 4 — Calendar
 1. Google Calendar connection in Settings (OAuth scopes for Calendar API)
 2. Hey Calendar (CalDAV) connection in Settings
