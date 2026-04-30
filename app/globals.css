@@ -175,58 +175,59 @@ textarea,
 /* On-screen keyboard — pencil design (research/ChuppaCal-Keyboard_pencil-design.jpg).
    Cream tray, round black alpha keys with white caps, family-color punctuation
    accents, three pill keys on the bottom row (sky 123 / ink space / coral del).
-   National Park body font for the keys.
 
-   NOTE: react-simple-keyboard ships its own theme on `.hg-theme-default` with
-   hardcoded `height: 40px` and `flex-grow: 1` on `.hg-button`. We compound
-   selectors (`.simple-keyboard.hg-theme-default`) to win specificity, and use
-   !important on the circle-critical sizing properties so the alpha keys stay
-   round regardless of import order. */
+   Sizing strategy: the library hardcodes `height: 40px` and `flex-grow: 1` on
+   `.hg-theme-default .hg-button`. Instead of fighting flex+aspect-ratio, we
+   set EXPLICIT width and height in `vmin` units so circles stay circles
+   regardless of orientation, and let rows shrink to their content (no flex:1
+   stretch) so the vertical gaps stay tight. */
 .simple-keyboard.hg-theme-default {
   background: var(--color-cc-cream);
   border-radius: var(--radius-cc-lg);
   font-family: var(--font-body);
-  padding: 1rem;
-  height: 100%;
-  overflow: visible;
-}
-.simple-keyboard.hg-theme-default .hg-rows {
+  padding: 0.75rem;
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  justify-content: center;
+  overflow: visible;
+}
+.simple-keyboard.hg-theme-default .hg-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 .simple-keyboard.hg-theme-default .hg-row {
   display: flex;
-  gap: 0.5rem;
-  flex: 1;
+  gap: 0.4rem;
+  flex: 0 0 auto !important;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0;
+  margin-bottom: 0 !important;
 }
 /* Cancel library's default per-button margin — we use gap instead */
 .simple-keyboard.hg-theme-default .hg-row .hg-button:not(:last-child),
 .simple-keyboard.hg-theme-default .hg-row .hg-button-container {
-  margin-right: 0;
+  margin-right: 0 !important;
 }
 
-/* Default key: perfect circle, ink with cream cap, National Park body */
+/* Default key: perfect circle, ink with cream cap, National Park body.
+   Fixed 7vmin diameter — about 76px on a 1080p display. */
 .simple-keyboard.hg-theme-default .hg-button {
   background: var(--color-cc-ink);
   color: var(--color-cc-cream);
   border: none;
   border-radius: 9999px;
   font-family: var(--font-body);
-  font-size: 1.5rem;
+  font-size: 2.5vmin;
   font-weight: 600;
   letter-spacing: -0.01em;
   box-shadow: none;
   padding: 0;
-  /* Circle sizing — beats library defaults */
-  flex: 0 0 auto !important;
-  height: 100% !important;
-  width: auto !important;
-  aspect-ratio: 1 !important;
+  /* Fixed circle */
+  width: 7vmin !important;
+  height: 7vmin !important;
+  flex: 0 0 7vmin !important;
   min-width: 0;
   max-width: none;
   display: flex;
@@ -269,23 +270,25 @@ textarea,
   color: var(--color-cc-cream);
 }
 
-/* Bottom-row pills — drop aspect-ratio, stretch horizontally with flex */
+/* Bottom-row pills — same height (7vmin), variable width via flex-grow */
 .simple-keyboard.hg-theme-default .hg-button.tk-key-numpad,
 .simple-keyboard.hg-theme-default .hg-button.tk-key-space,
 .simple-keyboard.hg-theme-default .hg-button.tk-key-del {
-  aspect-ratio: auto !important;
   width: auto !important;
+  height: 7vmin !important;
+  flex-shrink: 1 !important;
+  flex-basis: 0 !important;
 }
 .simple-keyboard.hg-theme-default .hg-button.tk-key-numpad {
   background: var(--color-sky);
   color: var(--color-cc-cream);
-  flex: 1.5 1 0 !important;
-  font-size: 1.25rem;
+  flex-grow: 1.5 !important;
+  font-size: 2vmin;
   letter-spacing: 0.05em;
 }
 .simple-keyboard.hg-theme-default .hg-button.tk-key-space {
-  flex: 7 1 0 !important;
-  font-size: 2rem;
+  flex-grow: 7 !important;
+  font-size: 3vmin;
   font-weight: 700;
   padding-bottom: 0.5rem;
   line-height: 0.5;
@@ -293,7 +296,7 @@ textarea,
 .simple-keyboard.hg-theme-default .hg-button.tk-key-del {
   background: var(--color-coral);
   color: var(--color-cc-cream);
-  flex: 1.5 1 0 !important;
-  font-size: 1.25rem;
+  flex-grow: 1.5 !important;
+  font-size: 2vmin;
   letter-spacing: 0.05em;
 }
