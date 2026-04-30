@@ -182,11 +182,18 @@ textarea,
    regardless of orientation, and let rows shrink to their content (no flex:1
    stretch) so the vertical gaps stay tight. */
 .simple-keyboard.hg-theme-default {
+  /* Tray width = 11 alpha keys (8vmin each) + 10 row-gaps (0.4rem) + 2× padding (0.75rem).
+     Centering this gives both alpha rows and the bottom pill row identical
+     horizontal extent — bottom-row pills stretch via flex to fill the same
+     width that 11 circles occupy in the alpha rows. */
   background: var(--color-cc-cream);
   border-radius: var(--radius-cc-lg);
   font-family: var(--font-body);
   padding: 0.75rem;
   height: 100%;
+  width: calc(11 * 8vmin + 10 * 0.4rem + 1.5rem);
+  max-width: 100%;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -212,7 +219,7 @@ textarea,
 }
 
 /* Default key: perfect circle, ink with cream cap, National Park body.
-   Fixed 7vmin diameter — about 76px on a 1080p display. */
+   Fixed 8vmin diameter — about 76px on a 1080p display. */
 .simple-keyboard.hg-theme-default .hg-button {
   background: var(--color-cc-ink);
   color: var(--color-cc-cream);
@@ -225,9 +232,9 @@ textarea,
   box-shadow: none;
   padding: 0;
   /* Fixed circle */
-  width: 7vmin !important;
-  height: 7vmin !important;
-  flex: 0 0 7vmin !important;
+  width: 8vmin !important;
+  height: 8vmin !important;
+  flex: 0 0 8vmin !important;
   min-width: 0;
   max-width: none;
   display: flex;
@@ -270,12 +277,12 @@ textarea,
   color: var(--color-cc-cream);
 }
 
-/* Bottom-row pills — same height (7vmin), variable width via flex-grow */
+/* Bottom-row pills — same height (8vmin), variable width via flex-grow */
 .simple-keyboard.hg-theme-default .hg-button.tk-key-numpad,
 .simple-keyboard.hg-theme-default .hg-button.tk-key-space,
 .simple-keyboard.hg-theme-default .hg-button.tk-key-del {
   width: auto !important;
-  height: 7vmin !important;
+  height: 8vmin !important;
   flex-shrink: 1 !important;
   flex-basis: 0 !important;
 }
