@@ -30,7 +30,7 @@ Add a touchscreen-friendly on-screen keyboard so the wall-mounted Acer + Raspber
 
 ## 3. Architecture
 
-A single `<TouchKeyboardProvider>` mounts in the route group layouts (`app/(main)/layout.tsx` and `app/onboarding/layout.tsx`). Existing input components are not modified.
+A single `<TouchKeyboardProvider>` mounts in the root layout (`app/layout.tsx`). All routes — `(main)/*`, `onboarding`, `login`, `auth/*` — share this layout, so one mount covers everything. Existing input components are not modified.
 
 ### Files
 
@@ -40,8 +40,7 @@ A single `<TouchKeyboardProvider>` mounts in the route group layouts (`app/(main
 | `components/keyboard/touch-keyboard.tsx` | Create | Thin wrapper around `react-simple-keyboard` with theming and key bindings |
 | `components/keyboard/use-kiosk-mode.ts` | Create | Hook: reads `?kiosk=1` and `localStorage`, returns boolean |
 | `lib/keyboard/set-input-value.ts` | Create | Native React value-setter helper to make controlled-input handlers fire on programmatic value writes |
-| `app/(main)/layout.tsx` | Modify | Wrap children in `<TouchKeyboardProvider>` |
-| `app/onboarding/layout.tsx` | Create or modify | Wrap children in `<TouchKeyboardProvider>` |
+| `app/layout.tsx` | Modify | Wrap children in `<TouchKeyboardProvider>` |
 | `components/settings/kiosk-mode-section.tsx` | Create | PIN-gated toggle for kiosk mode in `/settings` |
 | `app/(main)/settings/page.tsx` | Modify | Mount `<KioskModeSection>` |
 | `app/globals.css` | Modify | Theme overrides for `react-simple-keyboard` |
