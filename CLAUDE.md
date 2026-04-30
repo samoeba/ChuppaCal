@@ -34,7 +34,7 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
 - `useSearchParams()` must be wrapped in `<Suspense>`
 - Layouts are static by default — auth checks go in leaf components
 
-## Current Status — PHASE 7 IN PROGRESS (Phase 4 also paused mid-stream)
+## Current Status — PHASE 4 PAUSED
 
 ### ✅ Completed
 - **Phase 1: Project Scaffolding & Database**
@@ -65,9 +65,13 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
   - Full Supabase integration with RLS on `meal_plans` table
   - Recipe linking and Claude-powered ingredient suggestions intentionally deferred (out of scope for v1; depends on Phase 9)
 
-### 🚧 In Progress: Phase 7 — Lists
-- Columns (named lists), items, drag-to-reorder
-- Will later integrate with Phase 9 voice ("add milk to grocery")
+- **Phase 7: Lists** (v1 spec complete)
+  - Default lists seeded on family creation (in `/api/onboarding`) + idempotent backfill server action `seedDefaultsIfEmpty()` for the pre-Phase-7 family
+  - Item CRUD: add (optimistic), check/uncheck (optimistic), tap-to-edit text inline, long-press (500ms, mouse + touch) to delete with confirmation
+  - Per-list "Clear completed (n)" with confirmation
+  - Settings management section (PIN-gated): create / rename / change emoji + color / delete lists, all via `<ListEditModal>`
+  - Spec: `docs/superpowers/specs/2026-04-30-lists-design.md`; plan: `docs/superpowers/plans/2026-04-30-lists.md`
+  - Drag-to-reorder, realtime sync (Lists+Meals+Chores in one PR), and voice integration intentionally deferred
 
 ### 🔲 Paused: Phase 4 — Calendar
 1. Google Calendar connection in Settings (OAuth scopes for Calendar API)
