@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { National_Park, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import TouchKeyboardProvider from "@/components/keyboard/touch-keyboard-provider";
 
 const nationalPark = National_Park({
   variable: "--font-national-park",
@@ -31,7 +32,7 @@ export default function RootLayout({
       className={`${nationalPark.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-cc-beige text-cc-ink">
-        {children}
+        <TouchKeyboardProvider>{children}</TouchKeyboardProvider>
       </body>
     </html>
   );
