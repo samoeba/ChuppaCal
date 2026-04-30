@@ -78,13 +78,15 @@ All actions resolve `family_id` from the authenticated user via the existing `ge
 ## 6. Default-List Seeding
 
 ### New families
-`app/api/onboarding/route.ts` already creates the family using the service-role client. After family insert, also insert:
+`app/api/onboarding/route.ts:102-106` **already** seeds defaults using the service-role client:
 
 ```
-{ name: "Grocery",  emoji: "🛒", color: "#10b981", sort_order: 0 }
-{ name: "To-Do",    emoji: "✅", color: "#6366f1", sort_order: 1 }
-{ name: "Shopping", emoji: "🛍",  color: "#f59e0b", sort_order: 2 }
+{ name: "Grocery",  emoji: "🛒",  color: "#22c55e", sort_order: 0 }
+{ name: "To-Do",    emoji: "✏️",  color: "#6366f1", sort_order: 1 }
+{ name: "Shopping", emoji: "🛍️", color: "#f59e0b", sort_order: 2 }
 ```
+
+No changes needed there. The plan and verification just confirm this still works end-to-end.
 
 ### Existing pre-Phase-7 family (one-time backfill)
 The `/lists` Server Component fetches lists for the family. If the result is empty, it calls a `seedDefaultsIfEmpty()` server action that re-checks emptiness server-side (race-safe) and inserts the same three rows. After that, the page re-renders normally.
