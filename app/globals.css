@@ -175,30 +175,43 @@ textarea,
 /* On-screen keyboard — pencil design (research/ChuppaCal-Keyboard_pencil-design.jpg).
    Cream tray, round black alpha keys with white caps, family-color punctuation
    accents, three pill keys on the bottom row (sky 123 / ink space / coral del).
-   National Park body font for the keys. */
-.simple-keyboard {
+   National Park body font for the keys.
+
+   NOTE: react-simple-keyboard ships its own theme on `.hg-theme-default` with
+   hardcoded `height: 40px` and `flex-grow: 1` on `.hg-button`. We compound
+   selectors (`.simple-keyboard.hg-theme-default`) to win specificity, and use
+   !important on the circle-critical sizing properties so the alpha keys stay
+   round regardless of import order. */
+.simple-keyboard.hg-theme-default {
   background: var(--color-cc-cream);
   border-radius: var(--radius-cc-lg);
   font-family: var(--font-body);
   padding: 1rem;
   height: 100%;
+  overflow: visible;
 }
-.simple-keyboard .hg-rows {
+.simple-keyboard.hg-theme-default .hg-rows {
   height: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
-.simple-keyboard .hg-row {
+.simple-keyboard.hg-theme-default .hg-row {
   display: flex;
-  gap: 0.45rem;
+  gap: 0.5rem;
   flex: 1;
   align-items: center;
   justify-content: center;
+  margin-bottom: 0;
+}
+/* Cancel library's default per-button margin — we use gap instead */
+.simple-keyboard.hg-theme-default .hg-row .hg-button:not(:last-child),
+.simple-keyboard.hg-theme-default .hg-row .hg-button-container {
+  margin-right: 0;
 }
 
 /* Default key: perfect circle, ink with cream cap, National Park body */
-.simple-keyboard .hg-button {
+.simple-keyboard.hg-theme-default .hg-button {
   background: var(--color-cc-ink);
   color: var(--color-cc-cream);
   border: none;
@@ -207,10 +220,15 @@ textarea,
   font-size: 1.5rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  flex: 0 0 auto;
-  height: 100%;
-  aspect-ratio: 1;
+  box-shadow: none;
+  padding: 0;
+  /* Circle sizing — beats library defaults */
+  flex: 0 0 auto !important;
+  height: 100% !important;
+  width: auto !important;
+  aspect-ratio: 1 !important;
   min-width: 0;
+  max-width: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -219,62 +237,63 @@ textarea,
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.08s ease-out, background-color 0.1s, filter 0.1s;
 }
-.simple-keyboard .hg-button:active,
-.simple-keyboard .hg-activeButton {
+.simple-keyboard.hg-theme-default .hg-button:active,
+.simple-keyboard.hg-theme-default .hg-activeButton {
   transform: translateY(1px) scale(0.94);
   filter: brightness(0.85);
 }
 
 /* Family-color punctuation accents */
-.simple-keyboard .hg-button.tk-key-sun {
+.simple-keyboard.hg-theme-default .hg-button.tk-key-sun {
   background: var(--color-sun);
   color: var(--color-sun-deep);
 }
-.simple-keyboard .hg-button.tk-key-petal {
+.simple-keyboard.hg-theme-default .hg-button.tk-key-petal {
   background: var(--color-petal);
   color: var(--color-petal-deep);
 }
-.simple-keyboard .hg-button.tk-key-lagoon {
+.simple-keyboard.hg-theme-default .hg-button.tk-key-lagoon {
   background: var(--color-lagoon);
   color: var(--color-lagoon-deep);
 }
-.simple-keyboard .hg-button.tk-key-clover {
+.simple-keyboard.hg-theme-default .hg-button.tk-key-clover {
   background: var(--color-clover);
   color: var(--color-cc-cream);
 }
-.simple-keyboard .hg-button.tk-key-coral {
+.simple-keyboard.hg-theme-default .hg-button.tk-key-coral {
   background: var(--color-coral);
   color: var(--color-cc-cream);
 }
-.simple-keyboard .hg-button.tk-key-sky {
+.simple-keyboard.hg-theme-default .hg-button.tk-key-sky {
   background: var(--color-sky);
   color: var(--color-cc-cream);
 }
 
-/* Bottom-row pills — override circle defaults to stretch horizontally */
-.simple-keyboard .hg-button.tk-key-numpad,
-.simple-keyboard .hg-button.tk-key-space,
-.simple-keyboard .hg-button.tk-key-del {
-  aspect-ratio: auto;
+/* Bottom-row pills — drop aspect-ratio, stretch horizontally with flex */
+.simple-keyboard.hg-theme-default .hg-button.tk-key-numpad,
+.simple-keyboard.hg-theme-default .hg-button.tk-key-space,
+.simple-keyboard.hg-theme-default .hg-button.tk-key-del {
+  aspect-ratio: auto !important;
+  width: auto !important;
 }
-.simple-keyboard .hg-button.tk-key-numpad {
+.simple-keyboard.hg-theme-default .hg-button.tk-key-numpad {
   background: var(--color-sky);
   color: var(--color-cc-cream);
-  flex: 1.5 1 0;
+  flex: 1.5 1 0 !important;
   font-size: 1.25rem;
   letter-spacing: 0.05em;
 }
-.simple-keyboard .hg-button.tk-key-space {
-  flex: 7 1 0;
+.simple-keyboard.hg-theme-default .hg-button.tk-key-space {
+  flex: 7 1 0 !important;
   font-size: 2rem;
   font-weight: 700;
   padding-bottom: 0.5rem;
   line-height: 0.5;
 }
-.simple-keyboard .hg-button.tk-key-del {
+.simple-keyboard.hg-theme-default .hg-button.tk-key-del {
   background: var(--color-coral);
   color: var(--color-cc-cream);
-  flex: 1.5 1 0;
+  flex: 1.5 1 0 !important;
   font-size: 1.25rem;
   letter-spacing: 0.05em;
 }
