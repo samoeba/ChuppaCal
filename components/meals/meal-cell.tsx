@@ -20,14 +20,14 @@ export default function MealCell({ meal, isToday, onTap }: Props) {
       {meal ? (
         <>
           {meal.emoji && (
-            <span className="text-base leading-none">{meal.emoji}</span>
+            <span className="text-4xl leading-none">{meal.emoji}</span>
           )}
-          <span className="text-[10px] font-medium text-cc-ink leading-tight line-clamp-2 text-center px-0.5">
+          <span className="text-xs font-medium text-cc-ink leading-tight line-clamp-2 text-center px-0.5 mt-1">
             {meal.name}
           </span>
         </>
       ) : (
-        <span className="text-cc-ink/20 text-xl font-light leading-none">+</span>
+        <span className="text-cc-ink/20 text-4xl font-light leading-none">+</span>
       )}
     </button>
   );
