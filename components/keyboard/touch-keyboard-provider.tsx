@@ -39,10 +39,10 @@ export default function TouchKeyboardProvider({
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!kiosk) {
-      setFocused(null);
-      return;
-    }
+    // When kiosk is off, attach no listeners. The render below is also
+    // gated on `kiosk && focused`, so any stale `focused` ref is invisible
+    // until kiosk flips back on.
+    if (!kiosk) return;
 
     function onFocusIn(e: FocusEvent) {
       if (blurTimer.current) {

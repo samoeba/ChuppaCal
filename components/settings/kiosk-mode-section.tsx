@@ -1,20 +1,20 @@
 // components/settings/kiosk-mode-section.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { setKioskMode } from "@/components/keyboard/use-kiosk-mode";
 
-export default function KioskModeSection() {
-  // Initialize from current localStorage state on mount
-  const [enabled, setEnabled] = useState<boolean>(false);
+function getInitialEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem("chuppacal_kiosk") === "1";
+  } catch {
+    return false;
+  }
+}
 
-  useEffect(() => {
-    try {
-      setEnabled(window.localStorage.getItem("chuppacal_kiosk") === "1");
-    } catch {
-      setEnabled(false);
-    }
-  }, []);
+export default function KioskModeSection() {
+  const [enabled, setEnabled] = useState<boolean>(getInitialEnabled);
 
   function handleToggle() {
     const next = !enabled;

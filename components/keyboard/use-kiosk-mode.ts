@@ -24,33 +24,41 @@ function writeFlag(on: boolean): void {
 }
 
 /**
+ * Computes the initial kiosk-mode state at mount, processing any
+ * `?kiosk=1` / `?kiosk=0` URL param (which also writes to localStorage).
+ * Runs once via `useState` lazy initializer; returns false during SSR.
+ */
+function getInitialActive(): boolean {
+  if (typeof window === "undefined") return false;
+  const url = new URL(window.location.href);
+  const param = url.searchParams.get("kiosk");
+  if (param === "1") {
+    writeFlag(true);
+    return true;
+  }
+  if (param === "0") {
+    writeFlag(false);
+    return false;
+  }
+  return readFlag();
+}
+
+/**
  * Returns true when kiosk mode is active.
  *
- * Activation rules (in order):
+ * Activation rules (in order, evaluated once at mount):
  * 1. URL has `?kiosk=1` -> set flag and return true (kiosk URL is master switch).
  * 2. URL has `?kiosk=0` -> clear flag and return false (recovery URL).
  * 3. Otherwise read `localStorage.chuppacal_kiosk`.
  *
- * Returns false during SSR. Also subscribes to the `storage` event so
- * cross-tab toggles propagate, plus a custom event for same-tab toggles
- * triggered by the settings switch.
+ * Returns false during SSR. Subscribes to the `storage` event so cross-tab
+ * toggles propagate, plus a custom event for same-tab toggles triggered by
+ * the settings switch — both fire setState only from event handlers.
  */
 export function useKioskMode(): boolean {
-  const [active, setActive] = useState<boolean>(false);
+  const [active, setActive] = useState<boolean>(getInitialActive);
 
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const param = url.searchParams.get("kiosk");
-    if (param === "1") {
-      writeFlag(true);
-      setActive(true);
-    } else if (param === "0") {
-      writeFlag(false);
-      setActive(false);
-    } else {
-      setActive(readFlag());
-    }
-
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) setActive(readFlag());
     };
