@@ -11,7 +11,7 @@ export default function MealCell({ meal, isToday, onTap }: Props) {
     <button
       onClick={onTap}
       className={`
-        w-full min-h-[56px] rounded-xl p-1.5
+        w-full min-h-[112px] rounded-xl p-1.5
         flex flex-col items-center justify-center gap-0.5
         touch-manipulation transition-opacity active:opacity-60
         ${isToday ? "bg-sky/10" : "bg-cc-cream"}
