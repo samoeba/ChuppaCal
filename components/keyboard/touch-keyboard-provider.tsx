@@ -148,8 +148,9 @@ export default function TouchKeyboardProvider({
         <>
           <div
             onMouseDown={(e) => {
-              // Tap on backdrop dismisses; preventDefault keeps focus on input
-              // momentarily so blur fires cleanly.
+              // Invisible click-catcher — tap outside the keyboard panel
+              // dismisses; preventDefault keeps focus on input momentarily
+              // so blur fires cleanly. No background dim per design intent.
               e.preventDefault();
               focused.blur();
             }}
@@ -157,14 +158,19 @@ export default function TouchKeyboardProvider({
               e.preventDefault();
               focused.blur();
             }}
-            className="fixed inset-x-0 top-0 bottom-[40vh] bg-black/20 z-[55]"
+            className="fixed inset-0 z-[55]"
             aria-hidden="true"
           />
           <div
             onMouseDown={(e) => e.preventDefault()}
             onTouchStart={(e) => e.preventDefault()}
-            className="fixed inset-x-0 bottom-0 z-[60] bg-cc-cream border-t border-slate-200 shadow-2xl"
-            style={{ height: "40vh", minHeight: "260px" }}
+            className="fixed left-8 right-8 bottom-8 z-[60] bg-cc-cream rounded-cc-lg"
+            style={{
+              height: "40vh",
+              minHeight: "260px",
+              boxShadow:
+                "0 16px 40px -8px rgba(28, 26, 20, 0.22), 0 4px 12px rgba(28, 26, 20, 0.08)",
+            }}
           >
             <TouchKeyboard onKey={handleKey} />
           </div>
