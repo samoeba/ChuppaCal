@@ -172,12 +172,15 @@ textarea,
   scroll-behavior: smooth;
 }
 
-/* On-screen keyboard theme — retro-typewriter dark keys on cream,
-   with family-color action keys. Robuck Rounded for that playful feel. */
+/* On-screen keyboard — pencil design (research/ChuppaCal-Keyboard_pencil-design.jpg).
+   Cream tray, round black alpha keys with white caps, family-color punctuation
+   accents, three pill keys on the bottom row (sky 123 / ink space / coral del).
+   Robuck Rounded throughout for that warm playful kitchen-object feel. */
 .simple-keyboard {
-  background: transparent;
+  background: var(--color-cc-cream);
+  border-radius: var(--radius-cc-lg);
   font-family: var(--font-display, var(--font-national-park));
-  padding: 0.875rem 0.625rem;
+  padding: 1rem;
   height: 100%;
 }
 .simple-keyboard .hg-rows {
@@ -188,21 +191,21 @@ textarea,
 }
 .simple-keyboard .hg-row {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.45rem;
   flex: 1;
   align-items: stretch;
 }
 
-/* Default key: dark round "typewriter" key */
+/* Default key: round black "typewriter" key with cream caps */
 .simple-keyboard .hg-button {
   background: var(--color-cc-ink);
   color: var(--color-cc-cream);
   border: none;
-  border-radius: 9999px; /* full pill — round on small, pill on wide */
+  border-radius: 9999px;
   font-family: var(--font-display, var(--font-national-park));
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 1.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
   flex: 1;
   min-height: 48px;
   display: flex;
@@ -211,85 +214,59 @@ textarea,
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  box-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.18),
-    0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: transform 0.06s ease-out, box-shadow 0.06s ease-out, background-color 0.1s;
+  transition: transform 0.08s ease-out, background-color 0.1s;
 }
 .simple-keyboard .hg-button:active,
 .simple-keyboard .hg-activeButton {
-  transform: translateY(1px) scale(0.97);
-  box-shadow:
-    0 0 0 rgba(0, 0, 0, 0),
-    0 1px 2px rgba(0, 0, 0, 0.12);
+  transform: translateY(1px) scale(0.94);
+  filter: brightness(0.85);
 }
 
-/* Number row keys: slightly smaller text + softer fill so they don't shout */
-.simple-keyboard .hg-button.tk-key-num {
-  font-size: 1.125rem;
-  background: #2c2820; /* slightly warmer than ink */
-  color: var(--color-cc-cream);
+/* Family-color punctuation accents */
+.simple-keyboard .hg-button.tk-key-sun {
+  background: var(--color-sun);
+  color: var(--color-sun-deep);
 }
-
-/* Punctuation (' and -): match alpha but slightly muted */
-.simple-keyboard .hg-button.tk-key-punct {
-  background: #2c2820;
-  color: var(--color-cc-cream);
-  font-size: 1.5rem;
-  flex: 0.6;
-}
-
-/* Action keys — each gets its own family color for personality */
-.simple-keyboard .hg-button.tk-key-shift {
+.simple-keyboard .hg-button.tk-key-petal {
   background: var(--color-petal);
   color: var(--color-petal-deep);
-  flex: 1.2;
-  font-size: 1.5rem;
 }
-.simple-keyboard .hg-button.tk-key-shift:active {
-  background: var(--color-petal-soft);
-}
-
-.simple-keyboard .hg-button.tk-key-bksp {
-  background: var(--color-coral);
-  color: var(--color-cc-cream);
-  flex: 1.2;
-  font-size: 1.4rem;
-}
-.simple-keyboard .hg-button.tk-key-bksp:active {
-  background: var(--color-coral-deep);
-}
-
-.simple-keyboard .hg-button.tk-key-done {
+.simple-keyboard .hg-button.tk-key-lagoon {
   background: var(--color-lagoon);
   color: var(--color-lagoon-deep);
-  flex: 1.4;
-  font-size: 1.5rem;
 }
-.simple-keyboard .hg-button.tk-key-done:active {
-  background: var(--color-lagoon-soft);
-}
-
-.simple-keyboard .hg-button.tk-key-enter {
+.simple-keyboard .hg-button.tk-key-clover {
   background: var(--color-clover);
   color: var(--color-cc-cream);
-  flex: 1.4;
-  font-size: 1.6rem;
 }
-.simple-keyboard .hg-button.tk-key-enter:active {
-  background: var(--color-clover-deep);
+.simple-keyboard .hg-button.tk-key-coral {
+  background: var(--color-coral);
+  color: var(--color-cc-cream);
+}
+.simple-keyboard .hg-button.tk-key-sky {
+  background: var(--color-sky);
+  color: var(--color-cc-cream);
 }
 
-/* Space bar — wide pill, dark like alpha keys but bigger */
-.simple-keyboard .hg-button.tk-key-space {
-  background: var(--color-cc-ink);
+/* Bottom-row pills */
+.simple-keyboard .hg-button.tk-key-numpad {
+  background: var(--color-sky);
   color: var(--color-cc-cream);
-  flex: 5;
-  font-size: 0.875rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+  flex: 1.6;
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
 }
-.simple-keyboard .hg-button.tk-key-space::after {
-  content: "space";
-  opacity: 0.5;
+.simple-keyboard .hg-button.tk-key-space {
+  flex: 7;
+  font-size: 2rem;
+  font-weight: 700;
+  padding-bottom: 0.5rem;
+  line-height: 0.5;
+}
+.simple-keyboard .hg-button.tk-key-del {
+  background: var(--color-coral);
+  color: var(--color-cc-cream);
+  flex: 1.6;
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
 }

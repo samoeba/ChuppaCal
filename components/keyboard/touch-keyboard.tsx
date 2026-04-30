@@ -14,76 +14,77 @@ interface Props {
   onKey: (e: KeyEvent) => void;
 }
 
-const LAYOUT_DEFAULT = [
-  "1 2 3 4 5 6 7 8 9 0",
-  "q w e r t y u i o p",
-  "a s d f g h j k l",
-  "{shift} z x c v b n m {bksp}",
-  "{done} ' {space} - {enter}",
+// 11 columns across rows 1-3; 3 pill keys on row 4. Letters render uppercase
+// (Robuck Rounded looks best in caps) but emit lowercase chars to keep form
+// values normal-cased. Family-color accents on punctuation match the pencil.
+const LAYOUT_ALPHA = [
+  "Q W E R T Y U I O P @",
+  "A S D F G H J K L - '",
+  "Z X C V B N M . ? + /",
+  "{num} {space} {bksp}",
 ];
 
-const LAYOUT_SHIFTED = [
+const LAYOUT_NUM = [
   "1 2 3 4 5 6 7 8 9 0",
-  "Q W E R T Y U I O P",
-  "A S D F G H J K L",
-  "{shift} Z X C V B N M {bksp}",
-  "{done} ' {space} - {enter}",
+  "! # $ % & * ( ) : ;",
+  "+ = _ \" , . ? - / @",
+  "{abc} {space} {bksp}",
 ];
 
 const DISPLAY: Record<string, string> = {
-  "{shift}": "⇧",
-  "{space}": " ",
-  "{enter}": "⏎",
-  "{done}": "✓",
-  "{bksp}": "⌫",
+  "{space}": "_",
+  "{bksp}": "del",
+  "{num}": "123",
+  "{abc}": "ABC",
 };
 
 const BUTTON_THEME = [
-  { class: "tk-key-shift", buttons: "{shift}" },
-  { class: "tk-key-bksp", buttons: "{bksp}" },
-  { class: "tk-key-done", buttons: "{done}" },
-  { class: "tk-key-enter", buttons: "{enter}" },
+  // Family-color punctuation accents (per pencil design)
+  { class: "tk-key-sun", buttons: "@ ." },
+  { class: "tk-key-petal", buttons: "-" },
+  { class: "tk-key-lagoon", buttons: "'" },
+  { class: "tk-key-clover", buttons: "?" },
+  { class: "tk-key-coral", buttons: "+" },
+  { class: "tk-key-sky", buttons: "/" },
+  // Bottom-row pills
+  { class: "tk-key-numpad", buttons: "{num} {abc}" },
   { class: "tk-key-space", buttons: "{space}" },
-  { class: "tk-key-punct", buttons: "' -" },
-  { class: "tk-key-num", buttons: "1 2 3 4 5 6 7 8 9 0" },
+  { class: "tk-key-del", buttons: "{bksp}" },
 ];
 
 export default function TouchKeyboard({ onKey }: Props) {
-  const [shifted, setShifted] = useState(false);
+  const [layout, setLayout] = useState<"alpha" | "num">("alpha");
 
   function handleKeyPress(button: string) {
-    if (button === "{shift}") {
-      setShifted((s) => !s);
+    if (button === "{num}") {
+      setLayout("num");
+      return;
+    }
+    if (button === "{abc}") {
+      setLayout("alpha");
       return;
     }
     if (button === "{space}") {
       onKey({ kind: "char", char: " " });
-      if (shifted) setShifted(false);
       return;
     }
     if (button === "{bksp}") {
       onKey({ kind: "backspace" });
       return;
     }
-    if (button === "{enter}") {
-      onKey({ kind: "enter" });
-      return;
+    // Single character — letters lowercase, symbols/digits as-is
+    if (button.length === 1) {
+      const char = /[A-Z]/.test(button) ? button.toLowerCase() : button;
+      onKey({ kind: "char", char });
     }
-    if (button === "{done}") {
-      onKey({ kind: "done" });
-      return;
-    }
-    // Printable char
-    onKey({ kind: "char", char: button });
-    if (shifted) setShifted(false);
   }
 
   return (
     <Keyboard
-      layoutName={shifted ? "shifted" : "default"}
+      layoutName={layout}
       layout={{
-        default: LAYOUT_DEFAULT,
-        shifted: LAYOUT_SHIFTED,
+        alpha: LAYOUT_ALPHA,
+        num: LAYOUT_NUM,
       }}
       display={DISPLAY}
       buttonTheme={BUTTON_THEME}
