@@ -18,29 +18,34 @@ const LAYOUT_DEFAULT = [
   "1 2 3 4 5 6 7 8 9 0",
   "q w e r t y u i o p",
   "a s d f g h j k l",
-  "{shift} z x c v b n m ' -",
-  "{done} {space} {enter}",
+  "{shift} z x c v b n m {bksp}",
+  "{done} ' {space} - {enter}",
 ];
 
 const LAYOUT_SHIFTED = [
   "1 2 3 4 5 6 7 8 9 0",
   "Q W E R T Y U I O P",
   "A S D F G H J K L",
-  "{shift} Z X C V B N M ' -",
-  "{done} {space} {enter}",
+  "{shift} Z X C V B N M {bksp}",
+  "{done} ' {space} - {enter}",
 ];
 
 const DISPLAY: Record<string, string> = {
   "{shift}": "⇧",
   "{space}": " ",
   "{enter}": "⏎",
-  "{done}": "✓ Done",
+  "{done}": "✓",
   "{bksp}": "⌫",
 };
 
 const BUTTON_THEME = [
-  { class: "tk-key-action", buttons: "{shift} {enter} {done}" },
+  { class: "tk-key-shift", buttons: "{shift}" },
+  { class: "tk-key-bksp", buttons: "{bksp}" },
+  { class: "tk-key-done", buttons: "{done}" },
+  { class: "tk-key-enter", buttons: "{enter}" },
   { class: "tk-key-space", buttons: "{space}" },
+  { class: "tk-key-punct", buttons: "' -" },
+  { class: "tk-key-num", buttons: "1 2 3 4 5 6 7 8 9 0" },
 ];
 
 export default function TouchKeyboard({ onKey }: Props) {

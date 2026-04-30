@@ -172,12 +172,12 @@ textarea,
   scroll-behavior: smooth;
 }
 
-/* On-screen keyboard theme overrides for react-simple-keyboard.
-   Targets the library's BEM-ish class names. */
+/* On-screen keyboard theme — retro-typewriter dark keys on cream,
+   with family-color action keys. Robuck Rounded for that playful feel. */
 .simple-keyboard {
   background: transparent;
   font-family: var(--font-display, var(--font-national-park));
-  padding: 0.75rem 0.5rem;
+  padding: 0.875rem 0.625rem;
   height: 100%;
 }
 .simple-keyboard .hg-rows {
@@ -188,16 +188,21 @@ textarea,
 }
 .simple-keyboard .hg-row {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex: 1;
+  align-items: stretch;
 }
+
+/* Default key: dark round "typewriter" key */
 .simple-keyboard .hg-button {
-  background: white;
-  color: var(--color-cc-ink);
-  border: 1px solid rgba(28, 26, 20, 0.1);
-  border-radius: 0.75rem;
-  font-size: 1.25rem;
+  background: var(--color-cc-ink);
+  color: var(--color-cc-cream);
+  border: none;
+  border-radius: 9999px; /* full pill — round on small, pill on wide */
+  font-family: var(--font-display, var(--font-national-park));
+  font-size: 1.5rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   flex: 1;
   min-height: 48px;
   display: flex;
@@ -206,26 +211,85 @@ textarea,
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: background-color 0.05s, transform 0.05s;
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.18),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: transform 0.06s ease-out, box-shadow 0.06s ease-out, background-color 0.1s;
 }
 .simple-keyboard .hg-button:active,
 .simple-keyboard .hg-activeButton {
-  background: #f1f5f9; /* slate-100 */
-  transform: scale(0.97);
+  transform: translateY(1px) scale(0.97);
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 1px 2px rgba(0, 0, 0, 0.12);
 }
-.simple-keyboard .hg-button.tk-key-action {
-  background: #fb7185; /* rose-400 — close to cc-coral; tune later */
-  color: white;
-  border-color: transparent;
+
+/* Number row keys: slightly smaller text + softer fill so they don't shout */
+.simple-keyboard .hg-button.tk-key-num {
+  font-size: 1.125rem;
+  background: #2c2820; /* slightly warmer than ink */
+  color: var(--color-cc-cream);
 }
-.simple-keyboard .hg-button.tk-key-action:active {
-  background: #f43f5e; /* rose-500 */
+
+/* Punctuation (' and -): match alpha but slightly muted */
+.simple-keyboard .hg-button.tk-key-punct {
+  background: #2c2820;
+  color: var(--color-cc-cream);
+  font-size: 1.5rem;
+  flex: 0.6;
 }
+
+/* Action keys — each gets its own family color for personality */
+.simple-keyboard .hg-button.tk-key-shift {
+  background: var(--color-petal);
+  color: var(--color-petal-deep);
+  flex: 1.2;
+  font-size: 1.5rem;
+}
+.simple-keyboard .hg-button.tk-key-shift:active {
+  background: var(--color-petal-soft);
+}
+
+.simple-keyboard .hg-button.tk-key-bksp {
+  background: var(--color-coral);
+  color: var(--color-cc-cream);
+  flex: 1.2;
+  font-size: 1.4rem;
+}
+.simple-keyboard .hg-button.tk-key-bksp:active {
+  background: var(--color-coral-deep);
+}
+
+.simple-keyboard .hg-button.tk-key-done {
+  background: var(--color-lagoon);
+  color: var(--color-lagoon-deep);
+  flex: 1.4;
+  font-size: 1.5rem;
+}
+.simple-keyboard .hg-button.tk-key-done:active {
+  background: var(--color-lagoon-soft);
+}
+
+.simple-keyboard .hg-button.tk-key-enter {
+  background: var(--color-clover);
+  color: var(--color-cc-cream);
+  flex: 1.4;
+  font-size: 1.6rem;
+}
+.simple-keyboard .hg-button.tk-key-enter:active {
+  background: var(--color-clover-deep);
+}
+
+/* Space bar — wide pill, dark like alpha keys but bigger */
 .simple-keyboard .hg-button.tk-key-space {
-  flex: 4;
+  background: var(--color-cc-ink);
+  color: var(--color-cc-cream);
+  flex: 5;
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
-.simple-keyboard .hg-button[data-skbtn="{done}"],
-.simple-keyboard .hg-button[data-skbtn="{enter}"] {
-  flex: 1.5;
+.simple-keyboard .hg-button.tk-key-space::after {
+  content: "space";
+  opacity: 0.5;
 }
