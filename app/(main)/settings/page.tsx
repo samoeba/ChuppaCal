@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PinGate from "@/components/pin-gate";
-import type { CalendarConnection, ChoreTemplate, ChoreTemplateMember, Family, FamilyMember, StarReward } from "@/lib/types";
+import type { CalendarConnection, ChoreTemplate, ChoreTemplateMember, Family, FamilyMember, List, StarReward } from "@/lib/types";
 import ChoreTemplatesSection from "@/components/settings/chore-templates-section";
 import StarRewardsSection from "@/components/settings/star-rewards-section";
 import MealSlotsSection from "@/components/settings/meal-slots-section";
+import ListsSection from "@/components/settings/lists-section";
 import { toggleChoresEnabled } from "@/app/actions/chores";
 
 const COLORS = [
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const [savingWeather, setSavingWeather] = useState(false);
   const [templates, setTemplates] = useState<(ChoreTemplate & { memberIds: string[] })[]>([]);
   const [rewards, setRewards] = useState<StarReward[]>([]);
+  const [lists, setLists] = useState<List[]>([]);
 
   const supabase = createClient();
 
@@ -115,6 +117,14 @@ export default function SettingsPage() {
         );
       }
       if (rewardsData) setRewards(rewardsData as StarReward[]);
+
+      const { data: listsData } = await supabase
+        .from("lists")
+        .select("*")
+        .eq("family_id", member.family_id)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (listsData) setLists(listsData as List[]);
     } finally {
       setLoading(false);
     }
@@ -387,6 +397,8 @@ export default function SettingsPage() {
             }
           }
         />
+
+        <ListsSection initialLists={lists} />
 
         {/* Display / Weather */}
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
