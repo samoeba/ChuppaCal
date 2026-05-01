@@ -241,7 +241,7 @@ textarea,
   height: 8vmin !important;
   flex: 0 0 8vmin !important;
   min-width: 0;
-  max-width: none;
+  max-width: none !important;
   display: flex;
   align-items: center;
   justify-content: center;
