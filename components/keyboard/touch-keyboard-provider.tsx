@@ -36,7 +36,13 @@ export default function TouchKeyboardProvider({
 }) {
   const kiosk = useKioskMode();
   const [focused, setFocused] = useState<FocusableInput | null>(null);
+  const [exiting, setExiting] = useState(false);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasDesired = useRef(false);
+  const desired = kiosk && !!focused;
+  // Derived: render the keyboard while it's wanted OR still animating out.
+  const shown = desired || exiting;
 
   useEffect(() => {
     // When kiosk is off, attach no listeners. The render below is also
@@ -74,6 +80,38 @@ export default function TouchKeyboardProvider({
       if (blurTimer.current) clearTimeout(blurTimer.current);
     };
   }, [kiosk]);
+
+  // Drive the show/exit lifecycle so the keyboard can animate out before
+  // unmounting. Re-focusing during exit cancels the exit timer cleanly.
+  // setState calls here are deliberate transitions tied to the timer
+  // side effect — disabling the cascading-render lint for this effect.
+  useEffect(() => {
+    const previouslyDesired = wasDesired.current;
+    wasDesired.current = desired;
+    if (desired) {
+      if (exitTimer.current) {
+        clearTimeout(exitTimer.current);
+        exitTimer.current = null;
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (exiting) setExiting(false);
+      return;
+    }
+    if (previouslyDesired) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setExiting(true);
+      exitTimer.current = setTimeout(() => {
+        setExiting(false);
+        exitTimer.current = null;
+      }, 320);
+    }
+    return () => {
+      if (exitTimer.current) {
+        clearTimeout(exitTimer.current);
+        exitTimer.current = null;
+      }
+    };
+  }, [desired, exiting]);
 
   // Scroll the focused input into view when keyboard appears
   useEffect(() => {
@@ -144,7 +182,7 @@ export default function TouchKeyboardProvider({
   return (
     <>
       {children}
-      {kiosk && focused && (
+      {shown && (
         <>
           <div
             onMouseDown={(e) => {
@@ -152,16 +190,16 @@ export default function TouchKeyboardProvider({
               // dismisses; preventDefault keeps focus on input momentarily
               // so blur fires cleanly. No background dim per design intent.
               e.preventDefault();
-              focused.blur();
+              focused?.blur();
             }}
             onTouchStart={(e) => {
               e.preventDefault();
-              focused.blur();
+              focused?.blur();
             }}
             className="fixed inset-0 z-[55]"
             aria-hidden="true"
           />
-          <TouchKeyboard onKey={handleKey} />
+          <TouchKeyboard onKey={handleKey} exiting={exiting} />
         </>
       )}
     </>

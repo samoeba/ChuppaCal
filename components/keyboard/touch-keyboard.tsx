@@ -12,6 +12,7 @@ export type KeyEvent =
 
 interface Props {
   onKey: (e: KeyEvent) => void;
+  exiting?: boolean;
 }
 
 // 11 columns across rows 1-3; 3 pill keys on row 4. Letters render uppercase
@@ -52,7 +53,7 @@ const BUTTON_THEME = [
   { class: "tk-key-del", buttons: "{bksp}" },
 ];
 
-export default function TouchKeyboard({ onKey }: Props) {
+export default function TouchKeyboard({ onKey, exiting = false }: Props) {
   const [layout, setLayout] = useState<"alpha" | "num">("alpha");
 
   function handleKeyPress(button: string) {
@@ -88,6 +89,7 @@ export default function TouchKeyboard({ onKey }: Props) {
       }}
       display={DISPLAY}
       buttonTheme={BUTTON_THEME}
+      theme={`hg-theme-default hg-layout-default${exiting ? " kb-exiting" : ""}`}
       onKeyPress={handleKeyPress}
       preventMouseDownDefault={true}
       stopMouseDownPropagation={true}
