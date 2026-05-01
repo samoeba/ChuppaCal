@@ -1,10 +1,21 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Image from "next/image";
 import PinGate from "@/components/pin-gate";
 import { completeChore, uncompleteChore } from "@/app/actions/chores";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember } from "@/lib/types";
+
+function withViewTransition(cb: () => void) {
+  if (typeof document !== "undefined" && "startViewTransition" in document) {
+    (document as Document & { startViewTransition: (cb: () => void) => unknown }).startViewTransition(() => {
+      flushSync(cb);
+    });
+  } else {
+    cb();
+  }
+}
 
 interface ChoreRowProps {
   template: ChoreTemplate;
@@ -21,13 +32,19 @@ export default function ChoreRow({
   template, kid, completion, familyId, familyPin, today, onComplete, onUncomplete,
 }: ChoreRowProps) {
   const [animating, setAnimating] = useState(false);
+  const [pendingComplete, setPendingComplete] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const circleRef = useRef<HTMLButtonElement>(null);
-  const done = !!completion;
+  const done = !!completion || pendingComplete;
 
   async function handleTap() {
     if (done || animating) return;
     setAnimating(true);
+    setPendingComplete(true);
+    if (circleRef.current) {
+      const r = circleRef.current.getBoundingClientRect();
+      fireStars(r.left + r.width / 2, r.top + r.height / 2);
+    }
     const optimistic: ChoreCompletion = {
       id: crypto.randomUUID(),
       family_id: familyId,
@@ -37,22 +54,22 @@ export default function ChoreRow({
       stars_earned: template.star_value,
       completed_at: new Date().toISOString(),
     };
-    onComplete(optimistic);
-    if (circleRef.current) {
-      const r = circleRef.current.getBoundingClientRect();
-      fireStars(r.left + r.width / 2, r.top + r.height / 2);
-    }
     try {
-      await completeChore(template.id, kid.id, familyId, today, template.star_value);
+      await Promise.all([
+        completeChore(template.id, kid.id, familyId, today, template.star_value),
+        new Promise((r) => setTimeout(r, 850)),
+      ]);
+      withViewTransition(() => onComplete(optimistic));
     } catch {
-      onUncomplete(template.id, kid.id);
+      setPendingComplete(false);
     } finally {
       setAnimating(false);
     }
   }
 
   async function performUndo() {
-    onUncomplete(template.id, kid.id);
+    setPendingComplete(false);
+    withViewTransition(() => onUncomplete(template.id, kid.id));
     try {
       await uncompleteChore(template.id, kid.id, today);
       setShowUndo(false);
@@ -63,7 +80,10 @@ export default function ChoreRow({
 
   return (
     <>
-      <div className={`flex items-center gap-3 rounded-[20px] px-4 py-2.5 transition-colors ${done ? "bg-green-50" : "bg-white"}`}>
+      <div
+        className={`flex items-center gap-3 rounded-[20px] px-4 py-2.5 transition-colors ${done ? "bg-green-50" : "bg-white"}`}
+        style={{ viewTransitionName: `chore-${kid.id}-${template.id}` }}
+      >
         <button
           ref={circleRef}
           onClick={done ? () => setShowUndo(true) : handleTap}

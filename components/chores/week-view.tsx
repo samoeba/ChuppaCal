@@ -35,16 +35,22 @@ export default function WeekView({ allTemplates, completionsWeek, today, weekSta
 
   return (
     <div className="p-3 overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full text-sm border-collapse table-fixed">
+        <colgroup>
+          <col style={{ width: "25%" }} />
+          {weekDates.map((_, i) => (
+            <col key={i} style={{ width: `${75 / 7}%` }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            <th className="text-left text-xs font-bold uppercase tracking-wide text-slate-400 pb-2 pr-2 min-w-[90px]">
+            <th className="text-left text-xs font-bold uppercase tracking-wide text-slate-400 pb-2 pr-2">
               Chore
             </th>
             {weekDates.map((d, i) => (
               <th
                 key={i}
-                className={`text-center pb-2 w-9 text-xs font-bold uppercase tracking-wide ${
+                className={`text-center pb-2 text-xs font-bold uppercase tracking-wide ${
                   toDateString(d) === today ? "text-[#FD6B4A]" : "text-slate-400"
                 }`}
               >
@@ -56,7 +62,7 @@ export default function WeekView({ allTemplates, completionsWeek, today, weekSta
         <tbody>
           {weekTemplates.map((template) => (
             <tr key={template.id} className="border-t border-slate-100">
-              <td className="py-2 pr-2 text-xs font-semibold text-[#1C1A14] truncate max-w-[90px]">
+              <td className="py-2 pr-2 text-xs font-semibold text-[#1C1A14] truncate">
                 {template.emoji} {template.name}
               </td>
               {weekDates.map((d, i) => {
