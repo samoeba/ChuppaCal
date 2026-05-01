@@ -8,9 +8,9 @@ const REWARD_EMOJIS = ["🍦","🎮","🧸","🎠","🍕","🎬","🛝","🎨","
 type Form = { name: string; emoji: string; star_cost: number };
 const DEFAULT: Form = { name: "", emoji: "🎁", star_cost: 10 };
 
-interface Props { rewards: StarReward[]; familyId: string; }
+interface Props { rewards: StarReward[]; familyId: string; onChanged?: () => void; }
 
-export default function StarRewardsSection({ rewards, familyId }: Props) {
+export default function StarRewardsSection({ rewards, familyId, onChanged }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<StarReward | null>(null);
   const [form, setForm] = useState<Form>(DEFAULT);
@@ -26,12 +26,14 @@ export default function StarRewardsSection({ rewards, familyId }: Props) {
       if (editing) { await updateStarReward(editing.id, form); }
       else { await createStarReward(familyId, form); }
       setShowModal(false);
+      onChanged?.();
     } finally { setSaving(false); }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this reward?")) return;
     await deleteStarReward(id);
+    onChanged?.();
   }
 
   return (

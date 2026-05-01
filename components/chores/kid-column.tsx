@@ -5,6 +5,7 @@ import Image from "next/image";
 import TodayView from "@/components/chores/today-view";
 import WeekView from "@/components/chores/week-view";
 import RewardsView from "@/components/chores/rewards-view";
+import MemberAvatar from "@/components/family/member-avatar";
 import { computeStarBalance } from "@/lib/chores";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember, StarRedemption, StarReward } from "@/lib/types";
 
@@ -51,12 +52,7 @@ export default function KidColumn({
     >
       {/* Header */}
       <div className="flex items-center gap-4 px-6 py-5" style={{ borderBottom: "2px solid #F3EFE0" }}>
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center text-3xl flex-shrink-0"
-          style={{ backgroundColor: kid.color + "30" }}
-        >
-          {kid.avatar_emoji}
-        </div>
+        <MemberAvatar member={kid} size={56} emojiClassName="text-3xl" />
         <div className="flex-1">
           <div className="font-bold text-xl text-[#1C1A14]">{kid.name}</div>
           <div className="text-xs text-slate-400 mt-0.5 bg-slate-100 rounded-full px-2 py-0.5 inline-block">

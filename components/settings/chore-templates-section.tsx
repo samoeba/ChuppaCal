@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createChoreTemplate, updateChoreTemplate, deleteChoreTemplate } from "@/app/actions/chores";
+import MemberAvatar from "@/components/family/member-avatar";
 import type { ChoreRecurrence, ChoreTemplate, FamilyMember, RecurrenceType } from "@/lib/types";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -11,9 +12,9 @@ type TemplateWithMembers = ChoreTemplate & { memberIds: string[] };
 type Form = { name: string; emoji: string; star_value: number; recurrence: ChoreRecurrence; memberIds: string[] };
 const DEFAULT: Form = { name: "", emoji: "✅", star_value: 1, recurrence: { type: "daily" }, memberIds: [] };
 
-interface Props { templates: TemplateWithMembers[]; kids: FamilyMember[]; familyId: string; }
+interface Props { templates: TemplateWithMembers[]; kids: FamilyMember[]; familyId: string; onChanged?: () => void; }
 
-export default function ChoreTemplatesSection({ templates, kids, familyId }: Props) {
+export default function ChoreTemplatesSection({ templates, kids, familyId, onChanged }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<TemplateWithMembers | null>(null);
   const [form, setForm] = useState<Form>(DEFAULT);
@@ -41,12 +42,14 @@ export default function ChoreTemplatesSection({ templates, kids, familyId }: Pro
         await createChoreTemplate(familyId, { name: form.name, emoji: form.emoji, star_value: form.star_value, recurrence: form.recurrence }, form.memberIds);
       }
       setShowModal(false);
+      onChanged?.();
     } finally { setSaving(false); }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remove this chore?")) return;
     await deleteChoreTemplate(id);
+    onChanged?.();
   }
 
   function toggleDay(day: number) {
@@ -129,7 +132,10 @@ export default function ChoreTemplatesSection({ templates, kids, familyId }: Pro
                 <p className="text-sm text-slate-400 mb-2">Assign to</p>
                 <div className="flex gap-2 flex-wrap mb-4">
                   {kids.map((kid) => (
-                    <button key={kid.id} onClick={() => toggleMember(kid.id)} className={`px-3 py-1.5 rounded-xl text-sm font-semibold touch-manipulation ${form.memberIds.includes(kid.id) ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-600"}`}>{kid.avatar_emoji} {kid.name}</button>
+                    <button key={kid.id} onClick={() => toggleMember(kid.id)} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold touch-manipulation ${form.memberIds.includes(kid.id) ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-600"}`}>
+                      <MemberAvatar member={kid} size={20} emojiClassName="text-xs" />
+                      {kid.name}
+                    </button>
                   ))}
                 </div>
               </>

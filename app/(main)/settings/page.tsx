@@ -9,6 +9,8 @@ import StarRewardsSection from "@/components/settings/star-rewards-section";
 import MealSlotsSection from "@/components/settings/meal-slots-section";
 import ListsSection from "@/components/settings/lists-section";
 import KioskModeSection from "@/components/settings/kiosk-mode-section";
+import MemberAvatar from "@/components/family/member-avatar";
+import PhotoCropModal from "@/components/family/photo-crop-modal";
 import { toggleChoresEnabled } from "@/app/actions/chores";
 
 const COLORS = [
@@ -34,6 +36,9 @@ export default function SettingsPage() {
   const [memberColor, setMemberColor] = useState(COLORS[0]);
   const [memberAvatar, setMemberAvatar] = useState(AVATARS[0]);
   const [memberRole, setMemberRole] = useState<"parent" | "child">("child");
+  const [memberPhotoUrl, setMemberPhotoUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   // Display settings
   const [weatherLocation, setWeatherLocation] = useState("");
@@ -161,6 +166,7 @@ export default function SettingsPage() {
     setMemberColor(COLORS[members.length % COLORS.length]);
     setMemberAvatar(AVATARS[0]);
     setMemberRole("child");
+    setMemberPhotoUrl(null);
     setShowAddMember(true);
   }
 
@@ -170,7 +176,26 @@ export default function SettingsPage() {
     setMemberColor(member.color);
     setMemberAvatar(member.avatar_emoji);
     setMemberRole(member.role as "parent" | "child");
+    setMemberPhotoUrl(member.avatar_url);
     setShowAddMember(true);
+  }
+
+  async function uploadBlob(blob: Blob) {
+    if (!family) return;
+    setUploadingPhoto(true);
+    try {
+      const path = `${family.id}/${crypto.randomUUID()}.jpg`;
+      const { error } = await supabase.storage
+        .from("family-photos")
+        .upload(path, blob, { cacheControl: "3600", upsert: false, contentType: "image/jpeg" });
+      if (error) throw error;
+      const { data } = supabase.storage.from("family-photos").getPublicUrl(path);
+      setMemberPhotoUrl(data.publicUrl);
+    } catch (e) {
+      alert("Upload failed: " + (e as Error).message);
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   async function saveMember() {
@@ -183,6 +208,7 @@ export default function SettingsPage() {
           name: memberName,
           color: memberColor,
           avatar_emoji: memberAvatar,
+          avatar_url: memberPhotoUrl,
           role: memberRole,
         })
         .eq("id", editingMember.id);
@@ -192,6 +218,7 @@ export default function SettingsPage() {
         name: memberName,
         color: memberColor,
         avatar_emoji: memberAvatar,
+        avatar_url: memberPhotoUrl,
         role: memberRole,
       });
     }
@@ -260,12 +287,7 @@ export default function SettingsPage() {
                 key={member.id}
                 className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50"
               >
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ backgroundColor: member.color + "30" }}
-                >
-                  {member.avatar_emoji}
-                </div>
+                <MemberAvatar member={member} size={48} emojiClassName="text-2xl" />
                 <div className="flex-1">
                   <div className="font-semibold text-slate-900">
                     {member.name}
@@ -383,9 +405,10 @@ export default function SettingsPage() {
           templates={templates}
           kids={members.filter((m) => m.role === "child")}
           familyId={family.id}
+          onChanged={loadData}
         />
 
-        <StarRewardsSection rewards={rewards} familyId={family.id} />
+        <StarRewardsSection rewards={rewards} familyId={family.id} onChanged={loadData} />
 
         <MealSlotsSection
           familyId={family.id}
@@ -495,8 +518,54 @@ export default function SettingsPage() {
                 ))}
               </div>
 
-              {/* Avatar picker */}
-              <p className="text-sm text-slate-400 mb-2">Avatar</p>
+              {/* Photo */}
+              <p className="text-sm text-slate-400 mb-2">Photo</p>
+              <div className="flex items-center gap-3 mb-4">
+                <MemberAvatar
+                  member={{
+                    avatar_url: memberPhotoUrl,
+                    avatar_emoji: memberAvatar,
+                    color: memberColor,
+                    name: memberName || "preview",
+                  }}
+                  size={56}
+                  emojiClassName="text-2xl"
+                />
+                <div className="flex flex-col gap-2 flex-1">
+                  <label
+                    data-no-keyboard
+                    className={`text-sm font-semibold px-4 py-2 rounded-xl text-center cursor-pointer touch-manipulation ${
+                      uploadingPhoto ? "bg-slate-200 text-slate-400" : "bg-slate-100 text-slate-700 active:bg-slate-200"
+                    }`}
+                  >
+                    {uploadingPhoto ? "Uploading…" : memberPhotoUrl ? "Change photo" : "Upload photo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingPhoto}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setCropFile(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {memberPhotoUrl && (
+                    <button
+                      onClick={() => setMemberPhotoUrl(null)}
+                      className="text-xs text-slate-400 hover:text-rose-500 touch-manipulation"
+                    >
+                      Remove photo
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Emoji fallback picker */}
+              <p className="text-sm text-slate-400 mb-2">
+                Emoji {memberPhotoUrl && <span className="text-slate-300">(used if photo is removed)</span>}
+              </p>
               <div className="flex gap-2 mb-6 flex-wrap">
                 {AVATARS.map((emoji) => (
                   <button
@@ -529,6 +598,17 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {cropFile && (
+          <PhotoCropModal
+            file={cropFile}
+            onCancel={() => setCropFile(null)}
+            onSave={async (blob) => {
+              setCropFile(null);
+              await uploadBlob(blob);
+            }}
+          />
         )}
       </div>
     </PinGate>
