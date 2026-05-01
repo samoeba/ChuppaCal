@@ -184,7 +184,11 @@ export default function TouchKeyboardProvider({
     }
 
     setInputValue(el, newValue);
-    el.setSelectionRange(newCaret, newCaret);
+    try {
+      el.setSelectionRange(newCaret, newCaret);
+    } catch {
+      // number/email/etc. inputs don't support selection APIs — ignore
+    }
   }
 
   return (
