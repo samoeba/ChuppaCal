@@ -210,10 +210,12 @@ textarea,
    set EXPLICIT width and height in `vmin` units so circles stay circles
    regardless of orientation, and let rows shrink to their content (no flex:1
    stretch) so the vertical gaps stay tight. */
-.simple-keyboard.hg-theme-default {
-  /* Cream tray sized to the keyboard's natural span — fixed at the bottom of
-     the viewport, horizontally centered. Tray width = 11 circles + 10 gaps +
-     2× padding. Drop shadow lifts the whole tray off the page. */
+/* Keyboard shell — React-owned wrapper that holds positioning, surface,
+   shadow, and the open/close animation. The library's .simple-keyboard
+   element lives inside; it does its own DOM manipulation, but since
+   nothing on the shell forces the library to re-render, the entrance
+   animation only runs once on mount. */
+.kb-shell {
   position: fixed;
   bottom: 2rem;
   left: 50%;
@@ -221,26 +223,38 @@ textarea,
   z-index: 60;
   background: var(--color-cc-cream);
   border-radius: var(--radius-cc-lg);
-  font-family: var(--font-body);
   padding: 2rem;
-  width: auto;
-  /* max-width: calc(100% - 4rem); */
-  height: auto;
-  display: flex;
-  flex-direction: column;
   box-shadow:
-    rgba(255, 255, 255, 0.23) -8px -8px 24px 6px, rgba(28,26,20,0.3) 10px 10px 24px 4px;
+    rgba(255, 255, 255, 0.23) -8px -8px 24px 6px,
+    rgba(28, 26, 20, 0.3) 10px 10px 24px 4px;
   animation: keyboard-enter 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   will-change: transform, opacity;
 }
-.simple-keyboard.hg-theme-default.kb-exiting {
+.kb-shell.kb-shell-exiting {
   animation: keyboard-exit 320ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 @media (prefers-reduced-motion: reduce) {
-  .simple-keyboard.hg-theme-default,
-  .simple-keyboard.hg-theme-default.kb-exiting {
+  .kb-shell,
+  .kb-shell.kb-shell-exiting {
     animation: none;
   }
+}
+
+/* Library inner — strip any default positioning/surface so it's just a
+   transparent flex column for the row stack. */
+.kb-shell .simple-keyboard.hg-theme-default {
+  position: static;
+  background: transparent;
+  border-radius: 0;
+  font-family: var(--font-body);
+  padding: 0;
+  width: auto;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+  transform: none;
+  animation: none;
 }
 .simple-keyboard.hg-theme-default .hg-rows {
   display: flex;

@@ -81,18 +81,19 @@ export default function TouchKeyboard({ onKey, exiting = false }: Props) {
   }
 
   return (
-    <Keyboard
-      layoutName={layout}
-      layout={{
-        alpha: LAYOUT_ALPHA,
-        num: LAYOUT_NUM,
-      }}
-      display={DISPLAY}
-      buttonTheme={BUTTON_THEME}
-      theme={`hg-theme-default hg-layout-default${exiting ? " kb-exiting" : ""}`}
-      onKeyPress={handleKeyPress}
-      preventMouseDownDefault={true}
-      stopMouseDownPropagation={true}
-    />
+    <div className={`kb-shell${exiting ? " kb-shell-exiting" : ""}`}>
+      <Keyboard
+        layoutName={layout}
+        layout={{
+          alpha: LAYOUT_ALPHA,
+          num: LAYOUT_NUM,
+        }}
+        display={DISPLAY}
+        buttonTheme={BUTTON_THEME}
+        onKeyPress={handleKeyPress}
+        preventMouseDownDefault={true}
+        stopMouseDownPropagation={true}
+      />
+    </div>
   );
 }
