@@ -34,7 +34,7 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
 - `useSearchParams()` must be wrapped in `<Suspense>`
 - Layouts are static by default — auth checks go in leaf components
 
-## Current Status — PHASE 4 PAUSED
+## Current Status
 
 ### ✅ Completed
 - **Phase 1: Project Scaffolding & Database**
@@ -57,6 +57,24 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
   - Route stubs for all 5 sections (calendar, chores, meals, lists, settings)
   - Touch-optimized global CSS (manipulation, no text select, tap highlight)
   - Settings page wrapped in `<PinGate>`
+
+- **Phase 4: Calendar** (Google + weather; CalDAV deferred)
+  - Day, Week, and Month views (`components/calendar/{day,week,month}-view.tsx`)
+  - Week view is a 5-day time grid with hour rail, scrollable 6-hour viewport, red current-time indicator (auto-scrolls on load), tap-to-open event detail popover, and a clickable member-legend filter (selection persisted to `localStorage`)
+  - Google Calendar OAuth: `/api/calendar/google/connect`, `/api/calendar/google/callback`, connection management at `/api/calendar/connections/[id]`
+  - Sync engine: `/api/cron/sync-calendars` (Vercel Cron) — pulls Google events into `calendar_events`
+  - Color-coded events per family member (members own a color, events join via `member_id`)
+  - Weather: OpenWeatherMap via `lib/weather.ts` rendered in `<WeatherBar>`; location set in Settings
+  - **Deferred:** Hey Calendar (CalDAV) — `CalendarProvider` type already includes `"caldav"`; sync route notes "CalDAV handled separately in a follow-up"
+
+- **Phase 5: Chores**
+  - Templates with per-kid assignment (many-to-many via `chore_template_members`) and recurrence (daily / weekly-on-days)
+  - Tap-to-complete with star-burst animation + `startViewTransition` for the green-state cross-fade; ~850ms delay before the row flips so the celebration plays through
+  - Optimistic local `pendingComplete` flag with rollback on write failure; long-press to undo a completion
+  - Star rewards: redemption view per kid, computed balance via `lib/chores.ts`, settings section to manage rewards
+  - Per-member `chores_enabled` toggle hides kids from the board without deleting them
+  - Migration `003_chores_restructure.sql` applied to Supabase (chore_assignments dropped, chore_template_members + new chore_completions live)
+  - Spec: `docs/superpowers/specs/2026-04-26-chores-design.md`; plan: `docs/superpowers/plans/2026-04-26-chores.md`
 
 - **Phase 6: Meal Planning** (v1 spec complete)
   - Weekly grid (7 days × 4 slots) with today highlight
@@ -82,22 +100,21 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
   - `.npmrc` enables `legacy-peer-deps=true` because `react-simple-keyboard` declares peerDeps on React ≤18 (works fine with React 19)
   - Spec: `docs/superpowers/specs/2026-04-30-on-screen-keyboard-design.md`; plan: `docs/superpowers/plans/2026-04-30-on-screen-keyboard.md`
 
-### 🔲 Paused: Phase 4 — Calendar
-1. Google Calendar connection in Settings (OAuth scopes for Calendar API)
-2. Hey Calendar (CalDAV) connection in Settings
-3. Sync engine (Vercel Cron: `/api/cron/sync-calendars`)
-4. Week view (default), Day view, Month view
-5. Color-coded events per family member
-6. Weather integration (OpenWeatherMap)
+- **Auxiliary: Family Member Photos**
+  - Members can have a real photo as their avatar; emoji is now a fallback
+  - `<MemberAvatar>` (`components/family/member-avatar.tsx`) centralizes the photo-or-emoji choice and is used in settings, the kid column, the chore-template assignment chips, and the calendar event popover
+  - `<PhotoCropModal>` uses `react-easy-crop` for a round 1:1 cropper; output is JPEG capped at 512px / quality 0.85
+  - Uploads land in the public `family-photos` bucket at `${family.id}/${uuid}.jpg`; paths are unguessable so privacy is acceptable for the kiosk use case
+  - Migration `004_family_photos_public.sql` applied (flips the bucket to `public = true`)
 
-### 🔲 Remaining Phases
-- Phase 5: Chores (templates, assignments, tap-to-complete, star rewards) — migration `003_chores_restructure.sql` written but not yet applied to Supabase
-- Phase 8: Screensaver, Sleep Mode & Pi kiosk setup
-- Phase 9: Voice Assistant (Alexa Custom Skill + Claude AI)
+### 🔲 Remaining
+- **Phase 4 follow-up:** Hey Calendar (CalDAV) connection + sync
+- **Phase 8:** Screensaver, Sleep Mode & Pi kiosk setup
+- **Phase 9:** Voice Assistant (Alexa Custom Skill + Claude AI)
 
 ## Supabase Setup Notes
 - Project ref: `skkxvyebvcjvhcbdzqhc`
-- Migration run successfully (all 13 tables + RLS + storage bucket)
+- All migrations applied through `004_family_photos_public.sql` (verified live: `chore_template_members` and `family_members.chores_enabled` exist; `chore_assignments` is gone; `family-photos` bucket is public)
 - Google OAuth enabled and working (Sign in / Providers → Google)
 - RLS note: onboarding uses service-role client (`/api/onboarding`) to bypass the chicken-and-egg problem where `get_family_id()` returns NULL for new users
 
