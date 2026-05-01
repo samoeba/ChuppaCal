@@ -1,10 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/cron/sync-calendars",
-      "schedule": "*/5 * * * *"
-    },
-    {
       "path": "/api/cron/generate-chores",
       "schedule": "0 0 * * *"
     }
