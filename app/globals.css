@@ -182,22 +182,26 @@ textarea,
    regardless of orientation, and let rows shrink to their content (no flex:1
    stretch) so the vertical gaps stay tight. */
 .simple-keyboard.hg-theme-default {
-  /* No tray — keys float directly on the page background, each with its own
-     drop shadow. Width is the natural span of 11 circles + 10 gaps; positioned
-     fixed at the bottom of the viewport, horizontally centered. */
+  /* Cream tray sized to the keyboard's natural span — fixed at the bottom of
+     the viewport, horizontally centered. Tray width = 11 circles + 10 gaps +
+     2× padding. Drop shadow lifts the whole tray off the page. */
   position: fixed;
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 60;
-  background: transparent;
+  background: var(--color-cc-cream);
+  border-radius: var(--radius-cc-lg);
   font-family: var(--font-body);
-  padding: 0;
-  width: calc(11 * 8vmin + 10 * 0.4rem);
+  padding: 0.75rem;
+  width: calc(11 * 8vmin + 10 * 0.4rem + 1.5rem);
   max-width: calc(100% - 4rem);
   height: auto;
   display: flex;
   flex-direction: column;
+  box-shadow:
+    0 24px 48px -12px rgba(28, 26, 20, 0.30),
+    0 8px 16px -4px rgba(28, 26, 20, 0.12);
 }
 .simple-keyboard.hg-theme-default .hg-rows {
   display: flex;
@@ -230,9 +234,7 @@ textarea,
   font-size: 2.5vmin;
   font-weight: 600;
   letter-spacing: -0.01em;
-  box-shadow:
-    0 6px 12px -2px rgba(28, 26, 20, 0.22),
-    0 2px 4px rgba(28, 26, 20, 0.10);
+  box-shadow: none;
   padding: 0;
   /* Fixed circle */
   width: 8vmin !important;
