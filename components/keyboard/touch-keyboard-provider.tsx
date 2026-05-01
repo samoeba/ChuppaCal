@@ -161,17 +161,7 @@ export default function TouchKeyboardProvider({
             className="fixed inset-0 z-[55]"
             aria-hidden="true"
           />
-          <div
-            onMouseDown={(e) => e.preventDefault()}
-            onTouchStart={(e) => e.preventDefault()}
-            className="fixed left-8 right-8 bottom-8 z-[60] bg-cc-cream rounded-cc-lg"
-            style={{
-              boxShadow:
-                "0 24px 48px -12px rgba(28, 26, 20, 0.30), 0 8px 16px -4px rgba(28, 26, 20, 0.12)",
-            }}
-          >
-            <TouchKeyboard onKey={handleKey} />
-          </div>
+          <TouchKeyboard onKey={handleKey} />
         </>
       )}
     </>
