@@ -184,25 +184,23 @@ textarea,
 .simple-keyboard.hg-theme-default {
   /* Tray width = 11 alpha keys (8vmin each) + 10 row-gaps (0.4rem) + 2× padding (0.75rem).
      Centering this gives both alpha rows and the bottom pill row identical
-     horizontal extent — bottom-row pills stretch via flex to fill the same
-     width that 11 circles occupy in the alpha rows. */
-  background: var(--color-cc-cream);
-  border-radius: var(--radius-cc-lg);
+     horizontal extent. Tray height is auto — sized to its row stack so the
+     wrapper panel can wrap snugly around the keys. */
+  background: transparent;
   font-family: var(--font-body);
   padding: 0.75rem;
-  height: 100%;
   width: calc(11 * 8vmin + 10 * 0.4rem + 1.5rem);
   max-width: 100%;
+  height: auto;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  overflow: visible;
 }
 .simple-keyboard.hg-theme-default .hg-rows {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  height: auto;
 }
 .simple-keyboard.hg-theme-default .hg-row {
   display: flex;

@@ -166,10 +166,8 @@ export default function TouchKeyboardProvider({
             onTouchStart={(e) => e.preventDefault()}
             className="fixed left-8 right-8 bottom-8 z-[60] bg-cc-cream rounded-cc-lg"
             style={{
-              height: "40vh",
-              minHeight: "260px",
               boxShadow:
-                "0 16px 40px -8px rgba(28, 26, 20, 0.22), 0 4px 12px rgba(28, 26, 20, 0.08)",
+                "0 24px 48px -12px rgba(28, 26, 20, 0.30), 0 8px 16px -4px rgba(28, 26, 20, 0.12)",
             }}
           >
             <TouchKeyboard onKey={handleKey} />
