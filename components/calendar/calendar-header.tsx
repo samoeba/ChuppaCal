@@ -23,6 +23,11 @@ export default function CalendarHeader({ view, date, children }: Props) {
   const label =
     view === "week" ? weekRangeLabel(date) : view === "month" ? monthLabel(date) : dayLabel(date);
 
+  const yearMatch = label.match(/^(.*?)(,?\s+)(\d{4})$/);
+  const main = yearMatch ? yearMatch[1] : label;
+  const separator = yearMatch ? yearMatch[2] : "";
+  const year = yearMatch ? yearMatch[3] : null;
+
   function go(delta: number) {
     const next = shiftForView(view, date, delta);
     router.push(`/calendar?view=${view}&date=${toDateParam(next)}`);
@@ -37,7 +42,22 @@ export default function CalendarHeader({ view, date, children }: Props) {
       <div className="flex items-center gap-3">
         {children}
         <div>
-          <div className="text-heading-md leading-tight">{label}</div>
+          <div
+            className="leading-none"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "2.75rem",
+              letterSpacing: "0",
+            }}
+          >
+            <span style={{ color: "var(--color-sky)" }}>{main}</span>
+            {year && (
+              <>
+                {separator}
+                <span style={{ color: "var(--color-petal)" }}>{year}</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2">

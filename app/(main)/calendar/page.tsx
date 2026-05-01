@@ -1,11 +1,8 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import CalendarBody from "@/components/calendar/calendar-body";
 import CalendarHeader from "@/components/calendar/calendar-header";
-import DayView from "@/components/calendar/day-view";
-import MemberLegend from "@/components/calendar/member-legend";
-import MonthView from "@/components/calendar/month-view";
 import WeatherBar from "@/components/calendar/weather-bar";
-import WeekView from "@/components/calendar/week-view";
 import {
   type EventWithMember,
   parseDate,
@@ -82,11 +79,7 @@ export default async function CalendarPage({
 
       <CalendarHeader view={view} date={date} />
 
-      {view === "week" && <WeekView date={date} events={enriched} />}
-      {view === "day" && <DayView date={date} events={enriched} />}
-      {view === "month" && <MonthView date={date} events={enriched} />}
-
-      <MemberLegend members={members} />
+      <CalendarBody view={view} date={date} members={members} events={enriched} />
     </div>
   );
 }

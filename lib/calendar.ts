@@ -2,6 +2,9 @@ import type { CalendarEvent, FamilyMember } from "@/lib/types";
 
 export type CalendarView = "day" | "week" | "month";
 
+// Week view shows the anchor day + the next N-1 days (today on the far left).
+export const WEEK_VIEW_DAYS = 5;
+
 export function parseView(raw: string | undefined): CalendarView {
   return raw === "day" || raw === "month" ? raw : "week";
 }
@@ -57,7 +60,8 @@ export function endOfMonthGrid(d: Date): Date {
 export function rangeForView(view: CalendarView, d: Date): { start: Date; end: Date } {
   if (view === "day") return { start: startOfDay(d), end: addDays(startOfDay(d), 1) };
   if (view === "month") return { start: startOfMonthGrid(d), end: endOfMonthGrid(d) };
-  return { start: startOfWeek(d), end: endOfWeek(d) };
+  const start = startOfDay(d);
+  return { start, end: addDays(start, WEEK_VIEW_DAYS) };
 }
 
 export function sameDay(a: Date, b: Date): boolean {
@@ -78,6 +82,14 @@ export function formatTime(d: Date): string {
   const suffix = h >= 12 ? "p" : "a";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2, "0")}${suffix}`;
+}
+
+export function formatTimeLong(d: Date): string {
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const suffix = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${h12} ${suffix}` : `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
 export type EventWithMember = CalendarEvent & { member: FamilyMember | null };
@@ -106,8 +118,8 @@ export function monthLabel(d: Date): string {
 }
 
 export function weekRangeLabel(d: Date): string {
-  const start = startOfWeek(d);
-  const end = addDays(start, 6);
+  const start = startOfDay(d);
+  const end = addDays(start, WEEK_VIEW_DAYS - 1);
   const sameMonth = start.getMonth() === end.getMonth();
   const startStr = start.toLocaleString("en-US", { month: "short", day: "numeric" });
   const endStr = sameMonth
@@ -127,5 +139,5 @@ export function shiftForView(view: CalendarView, d: Date, delta: number): Date {
     r.setMonth(r.getMonth() + delta);
     return r;
   }
-  return addDays(d, delta * 7);
+  return addDays(d, delta * WEEK_VIEW_DAYS);
 }
