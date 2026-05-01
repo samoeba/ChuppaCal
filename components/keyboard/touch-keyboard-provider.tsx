@@ -85,6 +85,9 @@ export default function TouchKeyboardProvider({
   // unmounting. Re-focusing during exit cancels the exit timer cleanly.
   // setState calls here are deliberate transitions tied to the timer
   // side effect — disabling the cascading-render lint for this effect.
+  // NOTE: no cleanup function — clearing the timer on every re-render
+  // would wipe out the timer we just scheduled (since setExiting triggers
+  // a re-render). Unmount cleanup lives in its own effect below.
   useEffect(() => {
     const previouslyDesired = wasDesired.current;
     wasDesired.current = desired;
@@ -105,13 +108,18 @@ export default function TouchKeyboardProvider({
         exitTimer.current = null;
       }, 320);
     }
+  }, [desired, exiting]);
+
+  // Unmount-only cleanup — clears any in-flight exit timer when the
+  // provider itself goes away.
+  useEffect(() => {
     return () => {
       if (exitTimer.current) {
         clearTimeout(exitTimer.current);
         exitTimer.current = null;
       }
     };
-  }, [desired, exiting]);
+  }, []);
 
   // Scroll the focused input into view when keyboard appears
   useEffect(() => {
