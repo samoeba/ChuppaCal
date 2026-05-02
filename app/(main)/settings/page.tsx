@@ -244,6 +244,12 @@ export default function SettingsPage() {
     alert("Invite link copied to clipboard!");
   }
 
+  async function signOut() {
+    if (!confirm("Sign out? You'll need to sign back in with your Google account.")) return;
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -464,6 +470,19 @@ export default function SettingsPage() {
             className="w-full bg-slate-100 text-slate-700 px-4 py-3 rounded-xl text-sm font-semibold active:bg-slate-200 transition-colors touch-manipulation"
           >
             📋 Copy Invite Link
+          </button>
+        </section>
+
+        <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">Account</h2>
+          <p className="text-sm text-slate-400 mb-4">
+            Signs out of ChuppaCal on this device only. Other devices stay signed in.
+          </p>
+          <button
+            onClick={signOut}
+            className="w-full bg-slate-100 text-slate-700 px-4 py-3 rounded-xl text-sm font-semibold active:bg-slate-200 transition-colors touch-manipulation"
+          >
+            Sign out
           </button>
         </section>
 
