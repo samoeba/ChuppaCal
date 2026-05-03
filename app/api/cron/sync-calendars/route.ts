@@ -1,3 +1,22 @@
+// Cron handler: pulls events from connected Google calendars into Supabase.
+//
+// Triggered every ~5 min by .github/workflows/sync-calendars.yml.
+// (Vercel Hobby crons cap at 1×/day, hence the offload to GitHub Actions.)
+//
+// Behavior contract:
+//   - Always returns HTTP 200 with `{ ok: true, results: [...] }`.
+//   - Per-connection failures (expired refresh tokens, Google 4xx/5xx) appear
+//     as `error` strings inside `results[i]`. Do NOT infer success from HTTP
+//     status alone — read the JSON body.
+//   - Returns 401 only when the bearer secret is wrong, 500 on a top-level
+//     Supabase failure.
+//
+// Auth: requires `Authorization: Bearer ${CRON_SECRET}` in production.
+// In local dev (no CRON_SECRET set), unauthenticated calls are allowed.
+//
+// See CLAUDE.md → "Calendar Sync Architecture" for the full chain + debugging
+// order + known gotchas.
+
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { eventToDbRow, listEvents } from "@/lib/google/calendar";
