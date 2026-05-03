@@ -34,7 +34,9 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
 - `useSearchParams()` must be wrapped in `<Suspense>`
 - Layouts are static by default — auth checks go in leaf components
 
-## Current Status
+## Current Status — Live in Production
+
+The app is deployed at **https://chuppa-cal.vercel.app** and pulling real calendar data on a 5-min loop. See "Production" section below for deploy + repo + sync details. The remaining work is on-device verification, kiosk hardware setup, and the optional Phase 9 voice work.
 
 ### ✅ Completed
 - **Phase 1: Project Scaffolding & Database**
@@ -50,7 +52,8 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
   - Invite second parent flow (invite link with family_id)
   - Family member CRUD in Settings (add/edit/remove, color picker, avatar picker, role)
   - `<PinGate>` component (4-digit numeric keypad, shake animation on wrong PIN)
-  - Google OAuth configured in both Google Cloud Console and Supabase dashboard
+  - Google OAuth configured in both Google Cloud Console and Supabase dashboard (OAuth app published — no longer in Testing mode)
+  - Sign-out button in Settings → Account section (`supabase.auth.signOut()` + redirect to `/login`)
 
 - **Phase 3: Layout Shell & Navigation**
   - Left sidebar (desktop) / bottom tabs (mobile) with CC branding
@@ -62,7 +65,7 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
   - Day, Week, and Month views (`components/calendar/{day,week,month}-view.tsx`)
   - Week view is a 5-day time grid with hour rail, scrollable 6-hour viewport, red current-time indicator (auto-scrolls on load), tap-to-open event detail popover, and a clickable member-legend filter (selection persisted to `localStorage`)
   - Google Calendar OAuth: `/api/calendar/google/connect`, `/api/calendar/google/callback`, connection management at `/api/calendar/connections/[id]`
-  - Sync engine: `/api/cron/sync-calendars` (Vercel Cron) — pulls Google events into `calendar_events`
+  - Sync engine: `/api/cron/sync-calendars` triggered every ~5 min by GitHub Actions (`*/5 * * * *`); pulls Google events into `calendar_events`. See "Calendar Sync Architecture" below for the full chain and debugging order.
   - Color-coded events per family member (members own a color, events join via `member_id`)
   - Weather: OpenWeatherMap via `lib/weather.ts` rendered in `<WeatherBar>`; location set in Settings
   - **Deferred:** Hey Calendar (CalDAV) — `CalendarProvider` type already includes `"caldav"`; sync route notes "CalDAV handled separately in a follow-up"
@@ -107,10 +110,25 @@ Pi runs Chromium in kiosk mode → loads Vercel URL. Supabase is the cloud backe
   - Uploads land in the public `family-photos` bucket at `${family.id}/${uuid}.jpg`; paths are unguessable so privacy is acceptable for the kiosk use case
   - Migration `004_family_photos_public.sql` applied (flips the bucket to `public = true`)
 
+### 🟡 Active / Next up
+
+- **On-device kiosk verification** — open `chuppa-cal.vercel.app` on the Pi 4 + Acer touchscreen and exercise the live UI: time-grid week view renders the synced events, color-coding shows for Dada, current-time line tracks correctly, member-legend filter persists across reloads, weather bar populates, touch keyboard appears on inputs, sign-out flow works. Catch UX bugs *before* committing to Phase 8 hardware setup.
+
 ### 🔲 Remaining
-- **Phase 4 follow-up:** Hey Calendar (CalDAV) connection + sync
-- **Phase 8:** Screensaver, Sleep Mode & Pi kiosk setup
+
+- **Phase 4 follow-up:** Hey Calendar (CalDAV) connection + sync — only matters if a family member uses Hey Calendar
+- **Phase 8:** Screensaver, Sleep Mode & Pi kiosk auto-launch (Chromium kiosk flag, sleep-on-schedule per `families.settings.sleep_start/end`, screensaver after `screensaver_timeout_minutes`)
 - **Phase 9:** Voice Assistant (Alexa Custom Skill + Claude AI)
+
+## Production
+
+- **Live URL:** https://chuppa-cal.vercel.app (Vercel Hobby plan, auto-deploys on push to `main`)
+- **Repo:** https://github.com/samoeba/ChuppaCal (public; gives the calendar-sync workflow unlimited Actions minutes)
+- **Active calendar connection:** `scasey@gbgmarketing.com` primary calendar, attached to Family A's Dada member (~250 events upserted on each sync). Note: the Supabase login (`samcaseydesign@gmail.com`) and the Calendar OAuth grant (`scasey@gbgmarketing.com`) are independent — see the "Supabase login ≠ Calendar OAuth account" gotcha below.
+- **Vercel cron jobs (`vercel.json`):** only `generate-chores` daily at 00:00 UTC. Calendar sync was moved off Vercel because Hobby caps cron at 1×/day.
+- **GitHub Actions workflows:** `sync-calendars.yml` runs `*/5 * * * *`; requires repo secrets `CALENDAR_SYNC_URL` and `CRON_SECRET` (mirrored from Vercel env).
+- **Vercel env vars (Production):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENWEATHER_API_KEY`, `CRON_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+- **Google OAuth client:** Published (Audience tab in Google Cloud Console — no longer Testing). Authorized redirect URIs include both prod and localhost callbacks for Supabase auth and Calendar API. App is unverified — first-time consent shows the yellow "unsafe" warning, click through Advanced.
 
 ## Calendar Sync Architecture
 
