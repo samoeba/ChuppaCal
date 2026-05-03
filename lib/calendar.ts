@@ -9,12 +9,16 @@ export function parseView(raw: string | undefined): CalendarView {
   return raw === "day" || raw === "month" ? raw : "week";
 }
 
+// Anchor parsed YYYY-MM-DD at noon UTC so the date "name" is stable in any
+// timezone between UTC-12 and UTC+11. Without this, server (UTC) and client
+// (e.g. PDT) round-trip the URL ?date param asymmetrically and the week-view
+// arrows shift by 4 days forward / 6 days backward instead of 5/5.
 export function parseDate(raw: string | undefined): Date {
   if (raw) {
-    const d = new Date(raw + "T00:00:00");
-    if (!Number.isNaN(d.getTime())) return startOfDay(d);
+    const d = new Date(raw + "T12:00:00Z");
+    if (!Number.isNaN(d.getTime())) return d;
   }
-  return startOfDay(new Date());
+  return new Date();
 }
 
 export function toDateParam(d: Date): string {
