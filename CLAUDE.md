@@ -110,14 +110,22 @@ The app is deployed at **https://chuppa-cal.vercel.app** and pulling real calend
   - Uploads land in the public `family-photos` bucket at `${family.id}/${uuid}.jpg`; paths are unguessable so privacy is acceptable for the kiosk use case
   - Migration `004_family_photos_public.sql` applied (flips the bucket to `public = true`)
 
+- **Phase 8 (partial): Pi Kiosk Auto-Launch** — kiosk auto-launch done; screensaver + sleep still deferred
+  - Pi 4 runs Raspberry Pi OS **Desktop (Debian 13 Trixie)** on **Wayland/`labwc`** — auto-logs into the desktop, then labwc runs the kiosk launcher
+  - Launcher at `~/.config/labwc/autostart` opens Chromium full-screen (`--kiosk`) to `https://chuppa-cal.vercel.app/calendar?kiosk=1`, wrapped in a `while` loop so it relaunches on crash/close
+  - Screen blanking disabled via `raspi-config` → Display Options → Screen Blanking (display stays on; sleep-on-schedule still deferred)
+  - Chromium profile persists the Supabase/Google session, so reboots go straight to the calendar (no re-login)
+  - Binary is `chromium` (`/usr/bin/chromium`), **not** `chromium-browser`. Maintenance escape hatch: **Ctrl+Alt+F2** → console login → edit/disable the autostart file
+  - Full runbook (setup-from-reflash, recovery, optional hardening): `docs/pi-kiosk-runbook.md`
+
 ### 🟡 Active / Next up
 
-- **On-device kiosk verification** — open `chuppa-cal.vercel.app` on the Pi 4 + Acer touchscreen and exercise the live UI: time-grid week view renders the synced events, color-coding shows for Dada, current-time line tracks correctly, member-legend filter persists across reloads, weather bar populates, touch keyboard appears on inputs, sign-out flow works. Catch UX bugs *before* committing to Phase 8 hardware setup.
+- **On-device UI shake-out** — kiosk now auto-launches full-screen on the Pi 4 + Acer touchscreen (✅ verified; see `docs/pi-kiosk-runbook.md`). Still worth exercising the live UI on-device: time-grid week view renders synced events with Dada's color-coding, current-time line tracks correctly, member-legend filter persists across reloads, weather bar populates, touch keyboard appears on inputs, sign-out works.
 
 ### 🔲 Remaining
 
 - **Phase 4 follow-up:** Hey Calendar (CalDAV) connection + sync — only matters if a family member uses Hey Calendar
-- **Phase 8:** Screensaver, Sleep Mode & Pi kiosk auto-launch (Chromium kiosk flag, sleep-on-schedule per `families.settings.sleep_start/end`, screensaver after `screensaver_timeout_minutes`)
+- **Phase 8 remainder:** Sleep Mode (dim on schedule per `families.settings.sleep_start/end`) + Photo Screensaver (cycle after `screensaver_timeout_minutes`). Pi kiosk auto-launch is ✅ done — see `docs/pi-kiosk-runbook.md`.
 - **Phase 9:** Voice Assistant (Alexa Custom Skill + Claude AI)
 
 ## Production
