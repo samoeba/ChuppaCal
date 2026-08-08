@@ -45,3 +45,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# design sources (large binaries; keep local, don't ship in the deploy bundle)
+*.ai
