@@ -19,7 +19,14 @@
 - **Existing components use inline `style={{}}` for token colors** (see `components/chores/kid-column.tsx:51`). Follow the surrounding file's convention rather than converting it.
 - **`.npmrc` sets `legacy-peer-deps=true`.** Leave it; `react-simple-keyboard` requires it.
 - **Commit style:** conventional commits (`feat(chores):`, `fix(chores):`, `docs(chores):`). Commit at the end of every task.
-- **Verification commands:** `npm run build` and `npm run lint` both must pass before any commit. After Task 2, `npx vitest run` must also pass.
+- **Verification commands:** `npm run lint` must pass before any commit, and after Task 2 so
+  must `npx vitest run`.
+- **Use `npx tsc --noEmit`, not `npm run build`, to check types mid-plan.** Turbopack aborts at
+  the first module-resolution failure and never type-checks the remaining files, so during the
+  tasks where the tree is deliberately half-migrated, `npm run build` will show you *one* error
+  and hide the rest — it cannot confirm a claim like "errors are confined to these three files."
+  `tsc --noEmit` reports them all. Run `npm run build` as the final gate once the tree is whole
+  again (Task 8 onward), where it must pass.
 
 ## Testing Strategy — read before Task 1
 
