@@ -9,8 +9,8 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const EMOJIS = ["✅","🛏","🧹","🪥","🐕","🍽","👕","📚","🚿","🗑","🌱","🧺","💧","🧼"];
 
 type TemplateWithMembers = ChoreTemplate & { memberIds: string[] };
-type Form = { name: string; emoji: string; star_value: number; recurrence: ChoreRecurrence; memberIds: string[] };
-const DEFAULT: Form = { name: "", emoji: "✅", star_value: 1, recurrence: { type: "daily" }, memberIds: [] };
+type Form = { name: string; emoji: string; recurrence: ChoreRecurrence; memberIds: string[] };
+const DEFAULT: Form = { name: "", emoji: "✅", recurrence: { type: "daily" }, memberIds: [] };
 
 interface Props { templates: TemplateWithMembers[]; kids: FamilyMember[]; familyId: string; onChanged?: () => void; }
 
@@ -28,7 +28,7 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
 
   function openEdit(t: TemplateWithMembers) {
     setEditing(t);
-    setForm({ name: t.name, emoji: t.emoji, star_value: t.star_value, recurrence: t.recurrence, memberIds: t.memberIds });
+    setForm({ name: t.name, emoji: t.emoji, recurrence: t.recurrence, memberIds: t.memberIds });
     setShowModal(true);
   }
 
@@ -37,9 +37,15 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
     setSaving(true);
     try {
       if (editing) {
-        await updateChoreTemplate(editing.id, { name: form.name, emoji: form.emoji, star_value: form.star_value, recurrence: form.recurrence }, form.memberIds);
+        await updateChoreTemplate(editing.id, {
+          name: form.name, emoji: form.emoji, star_value: 0,
+          recurrence: form.recurrence, category: "expectation", is_special: false,
+        }, form.memberIds);
       } else {
-        await createChoreTemplate(familyId, { name: form.name, emoji: form.emoji, star_value: form.star_value, recurrence: form.recurrence }, form.memberIds);
+        await createChoreTemplate(familyId, {
+          name: form.name, emoji: form.emoji, star_value: 0,
+          recurrence: form.recurrence, category: "expectation", is_special: false,
+        }, form.memberIds);
       }
       setShowModal(false);
       onChanged?.();
@@ -65,10 +71,11 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
 
   return (
     <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">Chore Templates</h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold text-slate-900">Expectations</h2>
         <button onClick={openAdd} className="bg-rose-500 text-white px-4 py-2 rounded-xl text-sm font-semibold touch-manipulation">+ Add Chore</button>
       </div>
+      <p className="text-sm text-slate-400 mb-4">Everyday jobs. These don&apos;t earn stars.</p>
 
       {templates.length === 0 ? (
         <p className="text-sm text-slate-400">No chores yet. Add one to get started.</p>
@@ -81,7 +88,6 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
                 <div className="font-semibold text-slate-900">{t.name}</div>
                 <div className="text-xs text-slate-400">
                   {t.recurrence.type === "daily" ? "Every day" : t.recurrence.type === "weekdays" ? "Weekdays" : "Custom"}
-                  {" · "}{"★".repeat(t.star_value)}
                   {t.memberIds.length > 0 && <> · {t.memberIds.map((id) => kids.find((k) => k.id === id)?.name).filter(Boolean).join(", ")}</>}
                 </div>
               </div>
@@ -103,13 +109,6 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
             <div className="flex gap-2 flex-wrap mb-4">
               {EMOJIS.map((e) => (
                 <button key={e} onClick={() => setForm((f) => ({ ...f, emoji: e }))} className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center touch-manipulation ${form.emoji === e ? "bg-slate-200 ring-2 ring-rose-500" : "bg-slate-50"}`}>{e}</button>
-              ))}
-            </div>
-
-            <p className="text-sm text-slate-400 mb-2">Star value</p>
-            <div className="flex gap-2 mb-4">
-              {[1, 2, 3].map((v) => (
-                <button key={v} onClick={() => setForm((f) => ({ ...f, star_value: v }))} className={`flex-1 py-2 rounded-xl text-sm font-semibold touch-manipulation ${form.star_value === v ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-600"}`}>{"★".repeat(v)}</button>
               ))}
             </div>
 

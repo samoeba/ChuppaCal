@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import PinGate from "@/components/pin-gate";
 import type { CalendarConnection, ChoreTemplate, ChoreTemplateMember, Family, FamilyMember, List, StarReward } from "@/lib/types";
 import ChoreTemplatesSection from "@/components/settings/chore-templates-section";
+import ExtraWorkSection from "@/components/settings/extra-work-section";
 import StarRewardsSection from "@/components/settings/star-rewards-section";
 import MealSlotsSection from "@/components/settings/meal-slots-section";
 import ListsSection from "@/components/settings/lists-section";
@@ -44,6 +45,7 @@ export default function SettingsPage() {
   const [weatherLocation, setWeatherLocation] = useState("");
   const [savingWeather, setSavingWeather] = useState(false);
   const [templates, setTemplates] = useState<(ChoreTemplate & { memberIds: string[] })[]>([]);
+  const [jobs, setJobs] = useState<ChoreTemplate[]>([]);
   const [rewards, setRewards] = useState<StarReward[]>([]);
   const [lists, setLists] = useState<List[]>([]);
 
@@ -113,15 +115,17 @@ export default function SettingsPage() {
         .eq("family_id", member.family_id)
         .order("star_cost");
 
+      const loaded = (templatesData ?? []) as ChoreTemplate[];
+      const expectations = loaded.filter((t) => t.category === "expectation");
+      setJobs(loaded.filter((t) => t.category === "extra_work"));
+
       const allTMs = (templateMembersData ?? []) as ChoreTemplateMember[];
-      if (templatesData) {
-        setTemplates(
-          (templatesData as ChoreTemplate[]).map((t) => ({
-            ...t,
-            memberIds: allTMs.filter((tm) => tm.template_id === t.id).map((tm) => tm.member_id),
-          }))
-        );
-      }
+      setTemplates(
+        expectations.map((t) => ({
+          ...t,
+          memberIds: allTMs.filter((tm) => tm.template_id === t.id).map((tm) => tm.member_id),
+        }))
+      );
       if (rewardsData) setRewards(rewardsData as StarReward[]);
 
       const { data: listsData } = await supabase
@@ -413,6 +417,8 @@ export default function SettingsPage() {
           familyId={family.id}
           onChanged={loadData}
         />
+
+        <ExtraWorkSection jobs={jobs} familyId={family.id} onChanged={loadData} />
 
         <StarRewardsSection rewards={rewards} familyId={family.id} onChanged={loadData} />
 
