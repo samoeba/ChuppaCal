@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 
 interface UnlockCelebrationProps {
@@ -9,10 +9,15 @@ interface UnlockCelebrationProps {
 }
 
 export default function UnlockCelebration({ kidName, onDone }: UnlockCelebrationProps) {
+  const onDoneRef = useRef(onDone);
   useEffect(() => {
-    const t = setTimeout(onDone, 2600);
-    return () => clearTimeout(t);
+    onDoneRef.current = onDone;
   }, [onDone]);
+
+  useEffect(() => {
+    const t = setTimeout(() => onDoneRef.current(), 2600);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <div
