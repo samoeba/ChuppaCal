@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import KidColumn from "@/components/chores/kid-column";
+import JobBoard from "@/components/chores/job-board";
 import UnlockCelebration from "@/components/chores/unlock-celebration";
 import ViewTabs, { type ChoresView } from "@/components/chores/view-tabs";
 import { expectationsForDay, gateOpen } from "@/lib/chores";
@@ -71,6 +72,18 @@ export default function ChoresBoard({
     setOptRedemptions((p) => [...p, r]);
   }
 
+  const [optClaims, setOptClaims] = useState(claimsToday);
+
+  function addClaim(c: ChoreCompletion) {
+    setOptClaims((p) => [...p, c]);
+    setOptAll((p) => [...p, c]);
+  }
+
+  function removeClaim(templateId: string) {
+    setOptClaims((p) => p.filter((c) => c.template_id !== templateId));
+    setOptAll((p) => p.filter((c) => !(c.template_id === templateId && c.date === today)));
+  }
+
   const [view, setView] = useState<ChoresView>("today");
 
   function liveGate(completions: ChoreCompletion[], memberId: string) {
@@ -109,7 +122,17 @@ export default function ChoresBoard({
 
       {view === "jobs" ? (
         <div className="flex-1 p-4 overflow-y-auto">
-          <p className="text-sm text-slate-400">Job board lands in Task 7.</p>
+          <JobBoard
+            jobs={jobs}
+            kids={kids}
+            gateByKid={liveGateByKid}
+            claimsToday={optClaims}
+            familyId={familyId}
+            familyPin={familyPin}
+            today={today}
+            onClaim={addClaim}
+            onRevoke={removeClaim}
+          />
         </div>
       ) : (
         <div className="flex gap-4 flex-1 p-4 overflow-hidden">
