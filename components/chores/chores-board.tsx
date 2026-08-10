@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import KidColumn from "@/components/chores/kid-column";
+import UnlockCelebration from "@/components/chores/unlock-celebration";
 import ViewTabs, { type ChoresView } from "@/components/chores/view-tabs";
 import { expectationsForDay, gateOpen } from "@/lib/chores";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember, StarRedemption, StarReward } from "@/lib/types";
@@ -41,11 +42,21 @@ export default function ChoresBoard({
   const [optWeek, setOptWeek] = useState(completionsWeek);
   const [optAll, setOptAll] = useState(allCompletions);
   const [optRedemptions, setOptRedemptions] = useState(redemptions);
+  const [unlockedKid, setUnlockedKid] = useState<string | null>(null);
 
   function addCompletion(c: ChoreCompletion) {
-    setOptToday((p) => [...p, c]);
+    const next = [...optToday, c];
+    setOptToday(next);
     setOptWeek((p) => [...p, c]);
     setOptAll((p) => [...p, c]);
+
+    if (c.category !== "expectation") return;
+    const wasOpen = liveGate(optToday, c.member_id);
+    const nowOpen = liveGate(next, c.member_id);
+    if (!wasOpen && nowOpen) {
+      const kid = kids.find((k) => k.id === c.member_id);
+      if (kid) setUnlockedKid(kid.name);
+    }
   }
 
   function removeCompletion(templateId: string, memberId: string) {
@@ -91,6 +102,9 @@ export default function ChoresBoard({
 
   return (
     <div className="flex flex-col h-full">
+      {unlockedKid && (
+        <UnlockCelebration kidName={unlockedKid} onDone={() => setUnlockedKid(null)} />
+      )}
       <ViewTabs view={view} onChange={setView} allLocked={allLocked} />
 
       {view === "jobs" ? (

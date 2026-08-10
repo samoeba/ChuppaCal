@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import Image from "next/image";
 import PinGate from "@/components/pin-gate";
 import { completeChore, uncompleteChore } from "@/app/actions/chores";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember } from "@/lib/types";
@@ -41,23 +40,20 @@ export default function ChoreRow({
     if (done || animating) return;
     setAnimating(true);
     setPendingComplete(true);
-    if (circleRef.current) {
-      const r = circleRef.current.getBoundingClientRect();
-      fireStars(r.left + r.width / 2, r.top + r.height / 2);
-    }
     const optimistic: ChoreCompletion = {
       id: crypto.randomUUID(),
       family_id: familyId,
       template_id: template.id,
       member_id: kid.id,
       date: today,
-      stars_earned: template.star_value,
+      stars_earned: 0,
       completed_at: new Date().toISOString(),
+      category: "expectation",
     };
     try {
       await Promise.all([
-        completeChore(template.id, kid.id, familyId, today, template.star_value),
-        new Promise((r) => setTimeout(r, 850)),
+        completeChore(template.id, kid.id, familyId, today),
+        new Promise((r) => setTimeout(r, 450)),
       ]);
       withViewTransition(() => onComplete(optimistic));
     } catch {
@@ -98,11 +94,6 @@ export default function ChoreRow({
         <div className={`flex-1 text-base font-semibold ${done ? "line-through text-slate-400" : "text-[#1C1A14]"}`}>
           {template.name}
         </div>
-        <div className="flex gap-0.5">
-          {Array.from({ length: template.star_value }).map((_, i) => (
-            <Image key={i} src="/star-small.png" alt="★" width={14} height={14} />
-          ))}
-        </div>
       </div>
 
       {showUndo && (
@@ -124,34 +115,7 @@ export default function ChoreRow({
           75%  { transform: scale(1.12); box-shadow: 0 0 0 18px rgba(82,193,122,0); }
           100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(82,193,122,0); }
         }
-        @keyframes starFly {
-          0%   { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
-          100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(0.3) rotate(var(--dr)); }
-        }
-        .star-particle {
-          position: fixed; width: 24px; height: 24px;
-          pointer-events: none; z-index: 9999;
-          animation: starFly 0.85s cubic-bezier(0.2,0.8,0.4,1) forwards;
-        }
       `}</style>
     </>
   );
-}
-
-function fireStars(cx: number, cy: number) {
-  [-55, -30, -10, 10, 30, 55].forEach((angle, i) => {
-    const img = document.createElement("img");
-    img.src = "/star-small.png";
-    img.className = "star-particle";
-    const rad = (angle - 90) * Math.PI / 180;
-    const dist = 80 + Math.random() * 40;
-    img.style.setProperty("--dx", `${Math.cos(rad) * dist}px`);
-    img.style.setProperty("--dy", `${Math.sin(rad) * dist}px`);
-    img.style.setProperty("--dr", `${(Math.random() - 0.5) * 60}deg`);
-    img.style.left = `${cx - 12}px`;
-    img.style.top = `${cy - 12}px`;
-    img.style.animationDelay = `${i * 35}ms`;
-    document.body.appendChild(img);
-    setTimeout(() => img.remove(), 1000);
-  });
 }
