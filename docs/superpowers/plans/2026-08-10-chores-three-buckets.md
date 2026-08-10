@@ -394,7 +394,8 @@ export function gateOpen(
 
 Run: `npx vitest run`
 
-Expected: PASS — 12 tests across 2 suites.
+Expected: PASS — 11 tests in one file (`lib/chores.test.ts`), across two `describe` blocks:
+4 for `expectationsForDay`, 7 for `gateOpen`.
 
 - [ ] **Step 7: Commit**
 
