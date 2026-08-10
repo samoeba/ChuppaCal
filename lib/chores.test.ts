@@ -68,6 +68,16 @@ describe("gateOpen", () => {
     expect(gateOpen([a, b], done, MONDAY)).toBe(true);
   });
 
+  it("requires completions for the right templates", () => {
+    const a = template({ id: "a" });
+    const b = template({ id: "b" });
+    const wrongCompletes = [
+      completion({ id: "c1", template_id: "a" }),
+      completion({ id: "c2", template_id: "a" })
+    ];
+    expect(gateOpen([a, b], wrongCompletes, MONDAY)).toBe(false);
+  });
+
   it("ignores completions from another date", () => {
     const stale = completion({ date: "2026-08-09" });
     expect(gateOpen([template()], [stale], MONDAY)).toBe(false);
