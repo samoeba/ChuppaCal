@@ -77,15 +77,25 @@ export default async function ChoresPage() {
   ]);
 
   const allTemplates = (templates ?? []) as ChoreTemplate[];
+  const expectations = allTemplates.filter((t) => t.category === "expectation");
+  const jobs = allTemplates.filter((t) => t.category === "extra_work");
+
   const familyTemplateIds = new Set(allTemplates.map((t) => t.id));
   const allTMs = ((templateMembers ?? []) as ChoreTemplateMember[]).filter(
     (tm) => familyTemplateIds.has(tm.template_id)
   );
+
+  const todayCompletions = (completionsToday ?? []) as ChoreCompletion[];
+
+  // Expectations only. Extra work has no chore_template_members rows by design,
+  // so this filter is belt-and-braces against a stray assignment.
   const templatesByMember: Record<string, ChoreTemplate[]> = {};
   for (const kid of members ?? []) {
     const ids = allTMs.filter((tm) => tm.member_id === kid.id).map((tm) => tm.template_id);
-    templatesByMember[kid.id] = allTemplates.filter((t) => ids.includes(t.id));
+    templatesByMember[kid.id] = expectations.filter((t) => ids.includes(t.id));
   }
+
+  const claimsToday = todayCompletions.filter((c) => c.category === "extra_work");
 
   type FamilyRow = { settings: { pin_hash: string | null } };
   const pinHash = ((family as FamilyRow | null)?.settings?.pin_hash) ?? "0000";
@@ -99,6 +109,8 @@ export default async function ChoresPage() {
       allCompletions={(allCompletions ?? []) as ChoreCompletion[]}
       rewards={(rewards ?? []) as StarReward[]}
       redemptions={(redemptions ?? []) as StarRedemption[]}
+      jobs={jobs}
+      claimsToday={claimsToday}
       familyId={familyId}
       familyPin={pinHash}
       today={todayStr}
