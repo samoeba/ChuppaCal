@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { ChoreRecurrence } from "@/lib/types";
+import { gateOpen } from "@/lib/chores";
+import type { ChoreCategory, ChoreCompletion, ChoreRecurrence, ChoreTemplate } from "@/lib/types";
 
 export async function completeChore(
   templateId: string,
   memberId: string,
   familyId: string,
-  date: string,
-  starsEarned: number
+  date: string
 ) {
   const supabase = await createClient();
   const { error } = await supabase.from("chore_completions").insert({
@@ -17,7 +17,8 @@ export async function completeChore(
     member_id: memberId,
     family_id: familyId,
     date,
-    stars_earned: starsEarned,
+    stars_earned: 0,
+    category: "expectation",
   });
   if (error) throw new Error(error.message);
   revalidatePath("/chores");
@@ -31,6 +32,79 @@ export async function uncompleteChore(templateId: string, memberId: string, date
     .eq("template_id", templateId)
     .eq("member_id", memberId)
     .eq("date", date);
+  if (error) throw new Error(error.message);
+  revalidatePath("/chores");
+}
+
+export type ClaimResult =
+  | { ok: true }
+  | { ok: false; reason: "already_claimed" | "locked" | "unavailable" };
+
+export async function claimJob(
+  templateId: string,
+  memberId: string,
+  familyId: string,
+  date: string
+): Promise<ClaimResult> {
+  const supabase = await createClient();
+
+  const { data: job } = await supabase
+    .from("chore_templates")
+    .select("id,star_value,category,active")
+    .eq("id", templateId)
+    .single();
+  if (!job || !job.active || job.category !== "extra_work") {
+    return { ok: false, reason: "unavailable" };
+  }
+
+  // Re-check the gate server-side. The client gate is for responsiveness only.
+  const { data: tmRows } = await supabase
+    .from("chore_template_members")
+    .select("template_id")
+    .eq("member_id", memberId);
+  const assignedIds = (tmRows ?? []).map((r) => r.template_id);
+
+  const { data: myTemplates } = assignedIds.length
+    ? await supabase.from("chore_templates").select("*").in("id", assignedIds).eq("active", true)
+    : { data: [] as ChoreTemplate[] };
+
+  const { data: myCompletions } = await supabase
+    .from("chore_completions")
+    .select("*")
+    .eq("member_id", memberId)
+    .eq("date", date);
+
+  if (!gateOpen((myTemplates ?? []) as ChoreTemplate[], (myCompletions ?? []) as ChoreCompletion[], date)) {
+    return { ok: false, reason: "locked" };
+  }
+
+  const { error } = await supabase.from("chore_completions").insert({
+    template_id: templateId,
+    member_id: memberId,
+    family_id: familyId,
+    date,
+    stars_earned: job.star_value,
+    category: "extra_work",
+  });
+
+  if (error) {
+    // 23505 = unique_violation from idx_extra_work_once_per_day: the sibling won the race.
+    if (error.code === "23505") return { ok: false, reason: "already_claimed" };
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/chores");
+  return { ok: true };
+}
+
+export async function revokeJob(templateId: string, date: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("chore_completions")
+    .delete()
+    .eq("template_id", templateId)
+    .eq("date", date)
+    .eq("category", "extra_work");
   if (error) throw new Error(error.message);
   revalidatePath("/chores");
 }
@@ -54,7 +128,14 @@ export async function redeemReward(
 
 export async function createChoreTemplate(
   familyId: string,
-  data: { name: string; emoji: string; star_value: number; recurrence: ChoreRecurrence },
+  data: {
+    name: string;
+    emoji: string;
+    star_value: number;
+    recurrence: ChoreRecurrence;
+    category: ChoreCategory;
+    is_special: boolean;
+  },
   memberIds: string[]
 ) {
   const supabase = await createClient();
@@ -76,7 +157,14 @@ export async function createChoreTemplate(
 
 export async function updateChoreTemplate(
   templateId: string,
-  data: { name: string; emoji: string; star_value: number; recurrence: ChoreRecurrence },
+  data: {
+    name: string;
+    emoji: string;
+    star_value: number;
+    recurrence: ChoreRecurrence;
+    category: ChoreCategory;
+    is_special: boolean;
+  },
   memberIds: string[]
 ) {
   const supabase = await createClient();
