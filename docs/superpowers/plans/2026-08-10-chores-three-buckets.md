@@ -481,31 +481,43 @@ export async function claimJob(
 ): Promise<ClaimResult> {
   const supabase = await createClient();
 
-  const { data: job } = await supabase
+  // maybeSingle, NOT single: single() returns a PGRST116 *error* for zero rows, which
+  // would throw below instead of falling through to the "unavailable" branch.
+  const { data: job, error: jobError } = await supabase
     .from("chore_templates")
     .select("id,star_value,category,active")
     .eq("id", templateId)
-    .single();
+    .maybeSingle();
+  if (jobError) throw new Error(jobError.message);
   if (!job || !job.active || job.category !== "extra_work") {
     return { ok: false, reason: "unavailable" };
   }
 
   // Re-check the gate server-side. The client gate is for responsiveness only.
-  const { data: tmRows } = await supabase
+  //
+  // Every query below MUST check `error` and throw. A failed query returns data: null,
+  // which is indistinguishable from "this child has no assigned templates" — and
+  // gateOpen treats a child with nothing scheduled as vacuously unlocked. Swallowing
+  // these errors makes the gate fail OPEN, paying a child who hasn't done their chores.
+  // A legitimately empty result set (data: [], error: null) must still read as zero rows.
+  const { data: tmRows, error: tmError } = await supabase
     .from("chore_template_members")
     .select("template_id")
     .eq("member_id", memberId);
+  if (tmError) throw new Error(tmError.message);
   const assignedIds = (tmRows ?? []).map((r) => r.template_id);
 
-  const { data: myTemplates } = assignedIds.length
+  const { data: myTemplates, error: myTemplatesError } = assignedIds.length
     ? await supabase.from("chore_templates").select("*").in("id", assignedIds).eq("active", true)
-    : { data: [] as ChoreTemplate[] };
+    : { data: [] as ChoreTemplate[], error: null };
+  if (myTemplatesError) throw new Error(myTemplatesError.message);
 
-  const { data: myCompletions } = await supabase
+  const { data: myCompletions, error: myCompletionsError } = await supabase
     .from("chore_completions")
     .select("*")
     .eq("member_id", memberId)
     .eq("date", date);
+  if (myCompletionsError) throw new Error(myCompletionsError.message);
 
   if (!gateOpen((myTemplates ?? []) as ChoreTemplate[], (myCompletions ?? []) as ChoreCompletion[], date)) {
     return { ok: false, reason: "locked" };
@@ -1212,17 +1224,26 @@ export default function JobBoard({
     };
     onClaim(optimistic);
 
-    const result = await claimJob(job.id, kid.id, familyId, today);
-    if (!result.ok) {
+    // claimJob returns a result for expected outcomes but THROWS on a genuine database
+    // error, so the call needs a catch — otherwise a failed query becomes an unhandled
+    // rejection inside a click handler and the optimistic claim is never rolled back.
+    try {
+      const result = await claimJob(job.id, kid.id, familyId, today);
+      if (!result.ok) {
+        onRevoke(job.id);
+        const other = kids.find((k) => k.id !== kid.id);
+        setToast(
+          result.reason === "already_claimed"
+            ? `${other?.name ?? "Someone"} already claimed this one`
+            : result.reason === "locked"
+            ? `${kid.name} needs to finish their jobs first`
+            : "That job isn't available anymore"
+        );
+        setTimeout(() => setToast(null), 2600);
+      }
+    } catch {
       onRevoke(job.id);
-      const other = kids.find((k) => k.id !== kid.id);
-      setToast(
-        result.reason === "already_claimed"
-          ? `${other?.name ?? "Someone"} already claimed this one`
-          : result.reason === "locked"
-          ? `${kid.name} needs to finish their jobs first`
-          : "That job isn't available anymore"
-      );
+      setToast("Couldn't save that — try again");
       setTimeout(() => setToast(null), 2600);
     }
   }
