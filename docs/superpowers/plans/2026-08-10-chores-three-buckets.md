@@ -1693,6 +1693,26 @@ git commit -m "feat(settings): split chore management into expectations and extr
 - Consumes: `createStarReward(familyId, { name, emoji, star_cost })` — already exists at `app/actions/chores.ts:105`
 - Produces: nothing consumed downstream
 
+**Also modify:** `app/actions/chores.ts` — see Step 0. The quick-add does not work without it.
+
+- [ ] **Step 0: Make reward writes refresh the chores screen**
+
+`createStarReward`, `updateStarReward`, and `deleteStarReward` call `revalidatePath("/settings")`
+only. The chores page is `force-dynamic` and receives `rewards` as a prop with no client
+refetch, so a reward created by this new quick-add is **invisible on the tab it was added
+from** — the feature silently fails to deliver its whole purpose. Nine of the eleven mutation
+actions in that file already revalidate `/chores`; these three are the outliers.
+
+Add the second call to all three:
+
+```ts
+  revalidatePath("/settings");
+  revalidatePath("/chores");
+```
+
+This also fixes reward edits and deletes made in Settings failing to reflect on the chores
+screen — a pre-existing bug this task simply makes visible.
+
 - [ ] **Step 1: Add quick-add state and the button**
 
 In `components/chores/rewards-view.tsx`, add to the component body:
@@ -1704,7 +1724,12 @@ In `components/chores/rewards-view.tsx`, add to the component body:
   const [saving, setSaving] = useState(false);
 
   async function saveReward() {
-    if (!form.name.trim() || saving) return;
+    // star_cost < 1 matters: Number("") === 0, and a reward unlocks when
+    // starBalance >= star_cost, so a zero-cost reward is permanently unlocked and
+    // silently breaks the earning mechanic. The `min={1}` on the input below is
+    // advisory only — this input is not inside a <form> and Save is not a submit
+    // button, so this guard is what actually enforces it.
+    if (!form.name.trim() || form.star_cost < 1 || saving) return;
     setSaving(true);
     try {
       await createStarReward(familyId, form);
@@ -1762,6 +1787,7 @@ Render a button beneath the reward list:
             />
             <input
               type="number"
+              min={1}
               value={form.star_cost}
               onChange={(e) => setForm((f) => ({ ...f, star_cost: Number(e.target.value) }))}
               className="w-full mb-4 px-4 py-3 rounded-xl bg-white"
