@@ -48,31 +48,35 @@ export async function claimJob(
 ): Promise<ClaimResult> {
   const supabase = await createClient();
 
-  const { data: job } = await supabase
+  const { data: job, error: jobError } = await supabase
     .from("chore_templates")
     .select("id,star_value,category,active")
     .eq("id", templateId)
     .single();
+  if (jobError) throw new Error(jobError.message);
   if (!job || !job.active || job.category !== "extra_work") {
     return { ok: false, reason: "unavailable" };
   }
 
   // Re-check the gate server-side. The client gate is for responsiveness only.
-  const { data: tmRows } = await supabase
+  const { data: tmRows, error: tmError } = await supabase
     .from("chore_template_members")
     .select("template_id")
     .eq("member_id", memberId);
+  if (tmError) throw new Error(tmError.message);
   const assignedIds = (tmRows ?? []).map((r) => r.template_id);
 
-  const { data: myTemplates } = assignedIds.length
+  const { data: myTemplates, error: myTemplatesError } = assignedIds.length
     ? await supabase.from("chore_templates").select("*").in("id", assignedIds).eq("active", true)
-    : { data: [] as ChoreTemplate[] };
+    : { data: [] as ChoreTemplate[], error: null };
+  if (myTemplatesError) throw new Error(myTemplatesError.message);
 
-  const { data: myCompletions } = await supabase
+  const { data: myCompletions, error: myCompletionsError } = await supabase
     .from("chore_completions")
     .select("*")
     .eq("member_id", memberId)
     .eq("date", date);
+  if (myCompletionsError) throw new Error(myCompletionsError.message);
 
   if (!gateOpen((myTemplates ?? []) as ChoreTemplate[], (myCompletions ?? []) as ChoreCompletion[], date)) {
     return { ok: false, reason: "locked" };
