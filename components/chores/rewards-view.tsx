@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import PinGate from "@/components/pin-gate";
-import { redeemReward } from "@/app/actions/chores";
+import { createStarReward, redeemReward } from "@/app/actions/chores";
 import type { FamilyMember, StarRedemption, StarReward } from "@/lib/types";
 
 interface RewardsViewProps {
@@ -17,6 +17,10 @@ interface RewardsViewProps {
 
 export default function RewardsView({ kid, rewards, starBalance, familyId, familyPin, onRedeem }: RewardsViewProps) {
   const [pendingReward, setPendingReward] = useState<StarReward | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [pinOk, setPinOk] = useState(false);
+  const [form, setForm] = useState({ name: "", emoji: "🎁", star_cost: 10 });
+  const [saving, setSaving] = useState(false);
 
   async function handleRedeem() {
     if (!pendingReward) return;
@@ -33,6 +37,19 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
       onRedeem(r);
     } finally {
       setPendingReward(null);
+    }
+  }
+
+  async function saveReward() {
+    if (!form.name.trim() || saving) return;
+    setSaving(true);
+    try {
+      await createStarReward(familyId, form);
+      setAdding(false);
+      setPinOk(false);
+      setForm({ name: "", emoji: "🎁", star_cost: 10 });
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -84,6 +101,14 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
         </div>
       )}
 
+      <button
+        onClick={() => setAdding(true)}
+        className="mt-3 w-full py-3 rounded-2xl font-bold touch-manipulation"
+        style={{ background: "#F3EFE0", color: "#1C1A14B3" }}
+      >
+        + Add reward
+      </button>
+
       {pendingReward && (
         <PinGate
           familyPin={familyPin}
@@ -93,6 +118,50 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
         >
           <div />
         </PinGate>
+      )}
+
+      {adding && !pinOk && (
+        <PinGate
+          familyPin={familyPin}
+          message="Add a reward"
+          onVerified={() => setPinOk(true)}
+          onCancel={() => setAdding(false)}
+        >
+          <div />
+        </PinGate>
+      )}
+
+      {adding && pinOk && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "#1C1A14CC" }}>
+          <div className="w-full max-w-sm rounded-3xl p-6" style={{ background: "#FAF6E8" }}>
+            <h3 className="text-lg font-bold mb-4">New reward</h3>
+            <input
+              value={form.emoji}
+              onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))}
+              className="w-full mb-3 px-4 py-3 rounded-xl bg-white text-2xl"
+            />
+            <input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Movie ticket"
+              className="w-full mb-3 px-4 py-3 rounded-xl bg-white"
+            />
+            <input
+              type="number"
+              value={form.star_cost}
+              onChange={(e) => setForm((f) => ({ ...f, star_cost: Number(e.target.value) }))}
+              className="w-full mb-4 px-4 py-3 rounded-xl bg-white"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => { setAdding(false); setPinOk(false); }} className="flex-1 py-3 rounded-xl bg-slate-100 font-semibold touch-manipulation">
+                Cancel
+              </button>
+              <button onClick={saveReward} disabled={saving} className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-semibold touch-manipulation disabled:opacity-50">
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
