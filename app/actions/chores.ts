@@ -52,7 +52,7 @@ export async function claimJob(
     .from("chore_templates")
     .select("id,star_value,category,active")
     .eq("id", templateId)
-    .single();
+    .maybeSingle();
   if (jobError) throw new Error(jobError.message);
   if (!job || !job.active || job.category !== "extra_work") {
     return { ok: false, reason: "unavailable" };
