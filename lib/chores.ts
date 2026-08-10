@@ -39,6 +39,27 @@ export function computeStarBalance(
   return Math.max(0, earned - spent);
 }
 
-export function templatesForDay(templates: ChoreTemplate[], date: Date): ChoreTemplate[] {
-  return templates.filter((t) => t.active && isScheduledToday(t.recurrence, date));
+export function expectationsForDay(templates: ChoreTemplate[], date: Date): ChoreTemplate[] {
+  return templates.filter(
+    (t) => t.active && t.category === "expectation" && isScheduledToday(t.recurrence, date)
+  );
+}
+
+/**
+ * A child may claim extra work only once every expectation assigned to them and
+ * scheduled today is complete. A child with nothing scheduled is vacuously open.
+ *
+ * `memberCompletions` must already be filtered to a single member.
+ */
+export function gateOpen(
+  memberTemplates: ChoreTemplate[],
+  memberCompletions: ChoreCompletion[],
+  dateStr: string
+): boolean {
+  const due = expectationsForDay(memberTemplates, new Date(dateStr + "T00:00:00"));
+  if (due.length === 0) return true;
+  const doneIds = new Set(
+    memberCompletions.filter((c) => c.date === dateStr).map((c) => c.template_id)
+  );
+  return due.every((t) => doneIds.has(t.id));
 }
