@@ -42,8 +42,54 @@ export default function ChoresBoard({
   const [optToday, setOptToday] = useState(completionsToday);
   const [optWeek, setOptWeek] = useState(completionsWeek);
   const [optAll, setOptAll] = useState(allCompletions);
+  const [optClaims, setOptClaims] = useState(claimsToday);
   const [optRedemptions, setOptRedemptions] = useState(redemptions);
   const [unlockedKid, setUnlockedKid] = useState<string | null>(null);
+
+  // Adopt fresh server data whenever a new RSC payload arrives.
+  //
+  // The five arrays above are seeded from server props and then advanced
+  // optimistically, so without this they keep their mount-time value forever:
+  // `router.refresh()` and `revalidatePath()` deliberately PRESERVE client state, and
+  // the kiosk tab stays open for days without a reload. Pass-through props (`jobs`,
+  // `rewards`, `kids`) do update, so the board drifts into a mixed state. The visible
+  // bug: the child who loses a claim race gets rolled back to an unclaimed, tappable
+  // row and can retry forever, never seeing who won.
+  //
+  // This is React's documented "adjusting state when a prop changes" -- compare the
+  // incoming props against the previous snapshot during render and call the setters in
+  // the render body. React re-renders immediately and never commits the discarded
+  // pass, so there is no intermediate paint and no effect (which this repo's lint
+  // config forbids anyway). A `key` on <ChoresBoard> would also resync, but it
+  // remounts: optimistic state and the selected tab would both be thrown away.
+  //
+  // Reference comparison is sufficient *and* is the intent: every array is
+  // deserialized fresh out of each RSC payload, so "a reference changed" means
+  // "a new server render arrived", which is exactly when committed database state
+  // should win. Repeat payloads with identical content resync to identical content --
+  // a harmless no-op. The snapshot is written in the same block, so this terminates
+  // after one extra render.
+  const [serverSnapshot, setServerSnapshot] = useState({
+    completionsToday,
+    completionsWeek,
+    allCompletions,
+    claimsToday,
+    redemptions,
+  });
+  if (
+    serverSnapshot.completionsToday !== completionsToday ||
+    serverSnapshot.completionsWeek !== completionsWeek ||
+    serverSnapshot.allCompletions !== allCompletions ||
+    serverSnapshot.claimsToday !== claimsToday ||
+    serverSnapshot.redemptions !== redemptions
+  ) {
+    setServerSnapshot({ completionsToday, completionsWeek, allCompletions, claimsToday, redemptions });
+    setOptToday(completionsToday);
+    setOptWeek(completionsWeek);
+    setOptAll(allCompletions);
+    setOptClaims(claimsToday);
+    setOptRedemptions(redemptions);
+  }
 
   // Functional updaters only. ChoreRow.handleTap awaits a server call plus a 450ms
   // delay before calling this, so two taps inside ~1s would otherwise commit a stale
@@ -67,8 +113,6 @@ export default function ChoresBoard({
   function addRedemption(r: StarRedemption) {
     setOptRedemptions((p) => [...p, r]);
   }
-
-  const [optClaims, setOptClaims] = useState(claimsToday);
 
   function addClaim(c: ChoreCompletion) {
     setOptClaims((p) => [...p, c]);
@@ -101,6 +145,13 @@ export default function ChoresBoard({
   // setOptToday updater: updaters must be pure, and StrictMode may run them twice.
   // The setState is guarded by a strict transition check and prevGateRef is written
   // on every run, so it cannot cascade -- hence the targeted rule suppression.
+  //
+  // Across a resync: the render that calls the setters above is discarded, so no
+  // effect runs for it and prevGateRef still holds the last COMMITTED gate map. The
+  // comparison is therefore "gate before the payload" vs "gate after the payload",
+  // which is the intended semantic -- a resync that opens a kid's gate (a parent
+  // finished their last expectation from a phone) SHOULD celebrate, and a resync that
+  // agrees with local state leaves the value unchanged, so nothing fires.
   const prevGateRef = useRef<Record<string, boolean>>({});
   useEffect(() => {
     for (const kid of kids) {
