@@ -350,6 +350,18 @@ describe("gateOpen", () => {
     const sundayOnly = template({ id: "s", recurrence: { type: "custom", days: [0] } });
     expect(gateOpen([template(), sundayOnly], [completion()], MONDAY)).toBe(true);
   });
+
+  // Without this case the suite only ever compares counts, and a wrong
+  // implementation (`completions.length >= due.length`) passes everything above.
+  it("requires completions for the right templates", () => {
+    const a = template({ id: "a" });
+    const b = template({ id: "b" });
+    const bothForA = [
+      completion({ id: "c1", template_id: "a" }),
+      completion({ id: "c2", template_id: "a" }),
+    ];
+    expect(gateOpen([a, b], bothForA, MONDAY)).toBe(false);
+  });
 });
 ```
 
@@ -394,8 +406,8 @@ export function gateOpen(
 
 Run: `npx vitest run`
 
-Expected: PASS — 11 tests in one file (`lib/chores.test.ts`), across two `describe` blocks:
-4 for `expectationsForDay`, 7 for `gateOpen`.
+Expected: PASS — 12 tests in one file (`lib/chores.test.ts`), across two `describe` blocks:
+4 for `expectationsForDay`, 8 for `gateOpen`.
 
 - [ ] **Step 7: Commit**
 
