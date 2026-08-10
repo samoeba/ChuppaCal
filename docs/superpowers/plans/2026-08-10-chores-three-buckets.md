@@ -19,8 +19,15 @@
 - **Existing components use inline `style={{}}` for token colors** (see `components/chores/kid-column.tsx:51`). Follow the surrounding file's convention rather than converting it.
 - **`.npmrc` sets `legacy-peer-deps=true`.** Leave it; `react-simple-keyboard` requires it.
 - **Commit style:** conventional commits (`feat(chores):`, `fix(chores):`, `docs(chores):`). Commit at the end of every task.
-- **Verification commands:** `npm run lint` must pass before any commit, and after Task 2 so
-  must `npx vitest run`.
+- **Verification commands:** `npx vitest run` must pass from Task 2 onward.
+- **`npm run lint` does NOT exit 0 on this repo and never has.** There is one pre-existing
+  ESLint *error* — "Calling setState synchronously within an effect can trigger cascading
+  renders" in `components/calendar/calendar-body.tsx:45` — plus a number of pre-existing
+  warnings. Verified present at `b481c25`, before any work on this plan. The gate is
+  therefore **"introduces no NEW lint error,"** not "lint passes." Do not fix
+  `calendar-body.tsx`; it is outside every task in this plan. Warnings are tolerated —
+  in particular, `jobs` and `claimsToday` are legitimately unused between Task 5 (which
+  declares them) and Task 7 (which consumes them).
 - **Use `npx tsc --noEmit`, not `npm run build`, to check types mid-plan.** Turbopack aborts at
   the first module-resolution failure and never type-checks the remaining files, so during the
   tasks where the tree is deliberately half-migrated, `npm run build` will show you *one* error
