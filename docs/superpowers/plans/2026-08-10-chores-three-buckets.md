@@ -910,7 +910,7 @@ Create `components/chores/unlock-celebration.tsx`:
 ```tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 
 interface UnlockCelebrationProps {
@@ -919,10 +919,21 @@ interface UnlockCelebrationProps {
 }
 
 export default function UnlockCelebration({ kidName, onDone }: UnlockCelebrationProps) {
+  // The timer must be created ONCE. The parent passes a fresh closure every render, so
+  // depending on `onDone` directly would clear and restart the 2.6s timer on every parent
+  // re-render — and on a shared kiosk a sibling tapping a chore mid-celebration would keep
+  // the overlay up indefinitely. Hold the callback in a ref and give the timer effect an
+  // empty dep array. Sync the ref inside an effect, not in the render body: this repo's
+  // `react-hooks/refs` rule rejects writing a ref during render.
+  const onDoneRef = useRef(onDone);
   useEffect(() => {
-    const t = setTimeout(onDone, 2600);
-    return () => clearTimeout(t);
+    onDoneRef.current = onDone;
   }, [onDone]);
+
+  useEffect(() => {
+    const t = setTimeout(() => onDoneRef.current(), 2600);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <div
