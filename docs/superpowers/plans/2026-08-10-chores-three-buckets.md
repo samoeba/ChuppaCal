@@ -76,6 +76,27 @@ Everything else — the migration, Supabase-backed server actions, and kiosk UI 
 - Consumes: nothing (first task)
 - Produces: `ChoreCategory = "expectation" | "extra_work"`; `ChoreTemplate.category: ChoreCategory`; `ChoreTemplate.is_special: boolean`; `ChoreCompletion.category: ChoreCategory`
 
+- [ ] **Step 0: Snapshot the tables you are about to mutate**
+
+This migration **irreversibly zeroes `star_value` on every existing template** and is applied
+by hand. There is no rollback. Take a snapshot first — run in the Supabase SQL editor:
+
+```sql
+create table public.chore_templates_backup_005 as
+  select * from public.chore_templates;
+
+create table public.chore_completions_backup_005 as
+  select * from public.chore_completions;
+
+select
+  (select count(*) from public.chore_templates_backup_005)   as templates_saved,
+  (select count(*) from public.chore_completions_backup_005) as completions_saved;
+```
+
+Expected: both counts non-zero and matching the live tables. Do not proceed until they do.
+
+Drop the backups only after the full verification checklist at the end of this plan passes.
+
 - [ ] **Step 1: Write the migration file**
 
 Create `supabase/migrations/005_chores_three_buckets.sql`:
@@ -1735,6 +1756,13 @@ Run the spec's full checklist (spec §12) against the dev server. Every item mus
 - [ ] `is_special` jobs show the ✦ badge and behave identically
 - [ ] Week view shows expectations only
 - [ ] One kid can claim several different jobs in one day
+
+- [ ] **Drop the Task 1 backups** — only once every box above is checked:
+
+```sql
+drop table public.chore_templates_backup_005;
+drop table public.chore_completions_backup_005;
+```
 
 - [ ] **Update `CLAUDE.md`** — revise the Phase 5 bullet to describe the three-bucket model, note migration `005` as applied, and link the new spec.
 
