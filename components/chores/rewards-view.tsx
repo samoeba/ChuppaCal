@@ -41,7 +41,7 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
   }
 
   async function saveReward() {
-    if (!form.name.trim() || saving) return;
+    if (!form.name.trim() || form.star_cost < 1 || saving) return;
     setSaving(true);
     try {
       await createStarReward(familyId, form);
@@ -148,6 +148,7 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
             />
             <input
               type="number"
+              min={1}
               value={form.star_cost}
               onChange={(e) => setForm((f) => ({ ...f, star_cost: Number(e.target.value) }))}
               className="w-full mb-4 px-4 py-3 rounded-xl bg-white"

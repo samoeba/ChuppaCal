@@ -202,6 +202,7 @@ export async function createStarReward(
   const { error } = await supabase.from("star_rewards").insert({ ...data, family_id: familyId });
   if (error) throw new Error(error.message);
   revalidatePath("/settings");
+  revalidatePath("/chores");
 }
 
 export async function updateStarReward(rewardId: string, data: { name: string; emoji: string; star_cost: number }) {
@@ -209,6 +210,7 @@ export async function updateStarReward(rewardId: string, data: { name: string; e
   const { error } = await supabase.from("star_rewards").update(data).eq("id", rewardId);
   if (error) throw new Error(error.message);
   revalidatePath("/settings");
+  revalidatePath("/chores");
 }
 
 export async function deleteStarReward(rewardId: string) {
@@ -216,6 +218,7 @@ export async function deleteStarReward(rewardId: string) {
   const { error } = await supabase.from("star_rewards").delete().eq("id", rewardId);
   if (error) throw new Error(error.message);
   revalidatePath("/settings");
+  revalidatePath("/chores");
 }
 
 export async function toggleChoresEnabled(memberId: string, enabled: boolean) {
