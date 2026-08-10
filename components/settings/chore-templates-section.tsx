@@ -19,22 +19,26 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
   const [editing, setEditing] = useState<TemplateWithMembers | null>(null);
   const [form, setForm] = useState<Form>(DEFAULT);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function openAdd() {
     setEditing(null);
     setForm({ ...DEFAULT, memberIds: kids.map((k) => k.id) });
+    setError(null);
     setShowModal(true);
   }
 
   function openEdit(t: TemplateWithMembers) {
     setEditing(t);
     setForm({ name: t.name, emoji: t.emoji, recurrence: t.recurrence, memberIds: t.memberIds });
+    setError(null);
     setShowModal(true);
   }
 
   async function handleSave() {
     if (!form.name.trim()) return;
     setSaving(true);
+    setError(null);
     try {
       if (editing) {
         await updateChoreTemplate(editing.id, {
@@ -47,15 +51,25 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
           recurrence: form.recurrence, category: "expectation", is_special: false,
         }, form.memberIds);
       }
+      setError(null);
       setShowModal(false);
       onChanged?.();
+    } catch (e) {
+      // createChoreTemplate/updateChoreTemplate throw on any DB error; without this
+      // catch the modal just sits there and the parent is told nothing.
+      setError(e instanceof Error ? e.message : "Couldn't save that chore — try again.");
     } finally { setSaving(false); }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Remove this chore?")) return;
-    await deleteChoreTemplate(id);
-    onChanged?.();
+    setError(null);
+    try {
+      await deleteChoreTemplate(id);
+      onChanged?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't delete that chore — try again.");
+    }
   }
 
   function toggleDay(day: number) {
@@ -98,6 +112,12 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
         </div>
       )}
 
+      {/* Delete is triggered from the list, not the modal, so the message needs a
+          home out here too when the modal is closed. */}
+      {error && !showModal && (
+        <p className="mt-3 text-sm font-semibold text-red-600" role="alert">{error}</p>
+      )}
+
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto">
@@ -138,6 +158,10 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
                   ))}
                 </div>
               </>
+            )}
+
+            {error && (
+              <p className="mb-3 text-sm font-semibold text-red-600" role="alert">{error}</p>
             )}
 
             <div className="flex gap-2">

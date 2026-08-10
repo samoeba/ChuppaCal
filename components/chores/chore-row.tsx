@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { flushSync } from "react-dom";
 import PinGate from "@/components/pin-gate";
 import { completeChore, uncompleteChore } from "@/app/actions/chores";
@@ -33,8 +33,13 @@ export default function ChoreRow({
   const [animating, setAnimating] = useState(false);
   const [pendingComplete, setPendingComplete] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
-  const circleRef = useRef<HTMLButtonElement>(null);
+  const [error, setError] = useState<string | null>(null);
   const done = !!completion || pendingComplete;
+
+  function flashError(message: string) {
+    setError(message);
+    setTimeout(() => setError(null), 2600);
+  }
 
   async function handleTap() {
     if (done || animating) return;
@@ -58,6 +63,7 @@ export default function ChoreRow({
       withViewTransition(() => onComplete(optimistic));
     } catch {
       setPendingComplete(false);
+      flashError("Couldn't save that — try again");
     } finally {
       setAnimating(false);
     }
@@ -71,6 +77,7 @@ export default function ChoreRow({
       setShowUndo(false);
     } catch {
       if (completion) onComplete(completion);
+      flashError("Couldn't undo that — try again");
     }
   }
 
@@ -81,7 +88,6 @@ export default function ChoreRow({
         style={{ viewTransitionName: `chore-${kid.id}-${template.id}` }}
       >
         <button
-          ref={circleRef}
           onClick={done ? () => setShowUndo(true) : handleTap}
           disabled={animating}
           className={`w-11 h-11 rounded-full border-[3px] flex items-center justify-center text-xl flex-shrink-0 touch-manipulation transition-all ${
@@ -105,6 +111,16 @@ export default function ChoreRow({
         >
           <div />
         </PinGate>
+      )}
+
+      {error && (
+        <div
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full font-bold z-9999"
+          style={{ background: "#1C1A14", color: "#FAF6E8" }}
+          role="alert"
+        >
+          {error}
+        </div>
       )}
 
       <style>{`

@@ -104,7 +104,7 @@ export default async function ChoresPage() {
     <ChoresBoard
       kids={(members ?? []) as FamilyMember[]}
       templatesByMember={templatesByMember}
-      completionsToday={(completionsToday ?? []) as ChoreCompletion[]}
+      completionsToday={todayCompletions.filter((c) => c.category === "expectation")}
       completionsWeek={(completionsWeek ?? []) as ChoreCompletion[]}
       allCompletions={(allCompletions ?? []) as ChoreCompletion[]}
       rewards={(rewards ?? []) as StarReward[]}

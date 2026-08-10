@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import KidColumn from "@/components/chores/kid-column";
 import JobBoard from "@/components/chores/job-board";
 import UnlockCelebration from "@/components/chores/unlock-celebration";
@@ -45,19 +45,15 @@ export default function ChoresBoard({
   const [optRedemptions, setOptRedemptions] = useState(redemptions);
   const [unlockedKid, setUnlockedKid] = useState<string | null>(null);
 
+  // Functional updaters only. ChoreRow.handleTap awaits a server call plus a 450ms
+  // delay before calling this, so two taps inside ~1s would otherwise commit a stale
+  // pre-first-completion array and erase the earlier completion. The unlock
+  // celebration is handled by the gate-transition effect below, NOT here -- updater
+  // functions must stay pure (StrictMode may invoke them twice).
   function addCompletion(c: ChoreCompletion) {
-    const next = [...optToday, c];
-    setOptToday(next);
+    setOptToday((p) => [...p, c]);
     setOptWeek((p) => [...p, c]);
     setOptAll((p) => [...p, c]);
-
-    if (c.category !== "expectation") return;
-    const wasOpen = liveGate(optToday, c.member_id);
-    const nowOpen = liveGate(next, c.member_id);
-    if (!wasOpen && nowOpen) {
-      const kid = kids.find((k) => k.id === c.member_id);
-      if (kid) setUnlockedKid(kid.name);
-    }
   }
 
   function removeCompletion(templateId: string, memberId: string) {
@@ -98,6 +94,23 @@ export default function ChoresBoard({
     kids.map((k) => [k.id, liveGate(optToday, k.id)])
   );
   const allLocked = kids.every((k) => !liveGateByKid[k.id]);
+
+  // Fire the unlock celebration on a false->true gate transition. On first mount the
+  // previous value is `undefined`, and `undefined === false` is false, so nothing
+  // fires on load. This deliberately lives in an effect rather than in the
+  // setOptToday updater: updaters must be pure, and StrictMode may run them twice.
+  // The setState is guarded by a strict transition check and prevGateRef is written
+  // on every run, so it cannot cascade -- hence the targeted rule suppression.
+  const prevGateRef = useRef<Record<string, boolean>>({});
+  useEffect(() => {
+    for (const kid of kids) {
+      if (prevGateRef.current[kid.id] === false && liveGateByKid[kid.id]) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setUnlockedKid(kid.name);
+      }
+    }
+    prevGateRef.current = liveGateByKid;
+  }, [liveGateByKid, kids]);
 
   if (kids.length === 0) {
     return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import MemberAvatar from "@/components/family/member-avatar";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember } from "@/lib/types";
@@ -26,12 +26,20 @@ export default function JobRow({ job, kids, gateByKid, claim, onOpen, onLongPres
     if (timer.current) clearTimeout(timer.current);
   }
 
+  // The board scrolls. On a touchscreen a scroll fires pointerdown then pointercancel,
+  // and pointerup/pointerleave may never arrive -- without this the 500ms timer
+  // completes and a PIN keypad appears mid-scroll.
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
   return (
     <div
       onClick={claim ? undefined : onOpen}
       onPointerDown={startPress}
       onPointerUp={endPress}
       onPointerLeave={endPress}
+      onPointerCancel={endPress}
       className="flex items-center gap-4 rounded-[20px] px-5 py-4 touch-manipulation"
       style={{ background: claim ? "#A7EB98" : "#FFFFFF" }}
     >

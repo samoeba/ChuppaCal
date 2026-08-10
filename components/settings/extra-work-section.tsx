@@ -18,22 +18,26 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
   const [editing, setEditing] = useState<ChoreTemplate | null>(null);
   const [form, setForm] = useState<Form>(DEFAULT);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function openAdd() {
     setEditing(null);
     setForm(DEFAULT);
+    setError(null);
     setShowModal(true);
   }
 
   function openEdit(j: ChoreTemplate) {
     setEditing(j);
     setForm({ name: j.name, emoji: j.emoji, star_value: j.star_value, is_special: j.is_special });
+    setError(null);
     setShowModal(true);
   }
 
   async function handleSave() {
     if (!form.name.trim() || saving) return;
     setSaving(true);
+    setError(null);
     const payload = {
       name: form.name,
       emoji: form.emoji,
@@ -45,17 +49,27 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
     try {
       if (editing) await updateChoreTemplate(editing.id, payload, []);
       else await createChoreTemplate(familyId, payload, []);
+      setError(null);
       setShowModal(false);
       onChanged();
+    } catch (e) {
+      // These actions throw on any DB error. Without this catch the rejection escapes
+      // the click handler and the parent gets no signal at all.
+      setError(e instanceof Error ? e.message : "Couldn't save that job — try again.");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    await deleteChoreTemplate(id);
-    setShowModal(false);
-    onChanged();
+    setError(null);
+    try {
+      await deleteChoreTemplate(id);
+      setShowModal(false);
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't delete that job — try again.");
+    }
   }
 
   return (
@@ -131,6 +145,12 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
             >
               {form.is_special ? "✦ Marked as a one-off" : "Mark as a one-off"}
             </button>
+
+            {error && (
+              <p className="mb-3 text-sm font-semibold text-red-600" role="alert">
+                {error}
+              </p>
+            )}
 
             <div className="flex gap-2">
               <button onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-xl bg-slate-100 font-semibold touch-manipulation">

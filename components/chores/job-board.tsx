@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import JobRow from "@/components/chores/job-row";
 import JobClaimModal from "@/components/chores/job-claim-modal";
 import PinGate from "@/components/pin-gate";
@@ -22,6 +23,7 @@ interface JobBoardProps {
 export default function JobBoard({
   jobs, kids, gateByKid, claimsToday, familyId, familyPin, today, onClaim, onRevoke,
 }: JobBoardProps) {
+  const router = useRouter();
   const [picking, setPicking] = useState<ChoreTemplate | null>(null);
   const [revoking, setRevoking] = useState<ChoreTemplate | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -57,11 +59,16 @@ export default function JobBoard({
             : "That job isn't available anymore"
         );
         setTimeout(() => setToast(null), 2600);
+        // claimJob returns before revalidatePath on the already_claimed path, so no
+        // fresh payload is pushed. Without this the losing child's row reverts to
+        // unclaimed-and-tappable and they can retry forever, never seeing the winner.
+        router.refresh();
       }
     } catch {
       onRevoke(job.id);
       setToast("Couldn't save that — try again");
       setTimeout(() => setToast(null), 2600);
+      router.refresh();
     }
   }
 
