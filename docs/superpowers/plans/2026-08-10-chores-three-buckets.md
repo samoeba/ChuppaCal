@@ -1830,7 +1830,38 @@ git commit -m "feat(chores): quick-add rewards from the Rewards tab"
 
 ## Final verification
 
-Run the spec's full checklist (spec §12) against the dev server. Every item must pass before this is considered done.
+**Nothing below has been run.** All nine tasks were implemented, reviewed, and fixed with the
+database migration still unapplied, so every runtime behavior in this feature is unverified.
+The code is type-clean (`tsc --noEmit` zero errors), builds, and passes 12 unit tests — none
+of which touches Supabase or a browser.
+
+### Step A — apply the migration, then prove it applied
+
+Paste **the entire** `supabase/migrations/005_chores_three_buckets.sql` in ONE execution. The
+Supabase SQL editor wraps a single execution in a transaction; running it statement-by-statement
+risks a half-applied schema whose worst form has the `category` columns present but
+`idx_extra_work_once_per_day` missing — which silently pays both children for the same job.
+
+Then run the verification block embedded at the bottom of that file:
+
+- [ ] `chk_pay_matches_category` and `chore_templates_star_value_range` both present
+- [ ] `chore_templates_star_value_check` is **gone** — `drop constraint if exists` is a silent
+      no-op under a non-default name, and if `chore_templates` happened to be empty the stale
+      constraint survives without erroring
+- [ ] `idx_extra_work_once_per_day` present on `chore_completions`
+
+### Step B — the three checks the reviews specifically asked for
+
+- [ ] **Rapid succession:** tap two of a child's expectations within about a second. Both must
+      stay counted, and finishing the last one must unlock Extra Work. This is the regression
+      test for a stale-closure bug that showed a fully green board with the tab still locked.
+- [ ] **The race, two devices:** claim a job on the kiosk, then claim the same job from a phone
+      as the other child. The loser must see "Someone already claimed this one", and their row
+      must settle on the winner's name **without a manual reload**.
+- [ ] **Reward quick-add visibility:** add a reward from the Rewards tab and confirm it appears
+      there immediately, not only in Settings.
+
+### Step C — the spec's checklist (spec §12)
 
 - [ ] Existing templates are expectations, pay nothing, remain tappable
 - [ ] Historical star balances unchanged from before the migration
@@ -1849,6 +1880,30 @@ Run the spec's full checklist (spec §12) against the dev server. Every item mus
 - [ ] `is_special` jobs show the ✦ badge and behave identically
 - [ ] Week view shows expectations only
 - [ ] One kid can claim several different jobs in one day
+
+### Known deferred issues — shipped deliberately, not forgotten
+
+Triaged by the final whole-branch review as safe to ship. Listed so they read as decisions
+rather than oversights if you hit one:
+
+- Two children unlocking within the same 2.6s window: the second name replaces the first in
+  the celebration overlay. Single state slot; the overlay still dismisses on schedule.
+- Two toasts within 2.6s of each other: the second is cut short by the first's timer.
+- Cancelling the reward quick-add keeps a half-typed draft for the next open.
+- Cancelling a settings save leaves the red error line visible under the list until the next
+  open, save, or delete.
+- Extra Work delete has no confirmation dialog while Expectations does. Both are soft deletes
+  (`active = false`) behind the settings PIN, so both are recoverable.
+- `migration 005` leaves `chore_templates.star_value` defaulting to `1` while `category`
+  defaults to `expectation`, so a **manual** SQL insert omitting `star_value` violates
+  `chk_pay_matches_category`. All application code supplies it explicitly.
+- `computeStarBalance` clamps at zero, so revoking a claim after the stars were already spent
+  destroys the difference rather than carrying a negative balance.
+- The chores day boundary comes from the server's UTC date, so it rolls at ~7pm US Central
+  rather than local midnight, and a kiosk holding one render can write to the previous day.
+  **This is the one deferred item with a money consequence** — a job claimed before the
+  boundary can be claimed again after it, paying twice for one piece of work. Worth fixing
+  properly with a `families.settings.timezone` value.
 
 - [ ] **Drop the Task 1 backups** — only once every box above is checked:
 
