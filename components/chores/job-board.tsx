@@ -49,10 +49,9 @@ export default function JobBoard({
       const result = await claimJob(job.id, kid.id, familyId, today);
       if (!result.ok) {
         onRevoke(job.id);
-        const other = kids.find((k) => k.id !== kid.id);
         setToast(
           result.reason === "already_claimed"
-            ? `${other?.name ?? "Someone"} already claimed this one`
+            ? "Someone already claimed this one"
             : result.reason === "locked"
             ? `${kid.name} needs to finish their jobs first`
             : "That job isn't available anymore"
@@ -67,11 +66,13 @@ export default function JobBoard({
   }
 
   async function performRevoke(job: ChoreTemplate) {
+    const previous = claimByTemplate[job.id];
     onRevoke(job.id);
     setRevoking(null);
     try {
       await revokeJob(job.id, today);
     } catch {
+      if (previous) onClaim(previous);   // put it back — the DB row still exists
       setToast("Couldn't undo that — try again");
       setTimeout(() => setToast(null), 2600);
     }
