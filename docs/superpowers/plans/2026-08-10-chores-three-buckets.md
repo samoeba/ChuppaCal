@@ -1251,8 +1251,11 @@ export default function JobBoard({
         onRevoke(job.id);
         const other = kids.find((k) => k.id !== kid.id);
         setToast(
+          // Generic on purpose: claimJob does not return the claimer's identity, and
+          // guessing it as "the other kid" only works while exactly two kids have chores
+          // enabled. The row itself names the real claimer once the board revalidates.
           result.reason === "already_claimed"
-            ? `${other?.name ?? "Someone"} already claimed this one`
+            ? "Someone already claimed this one"
             : result.reason === "locked"
             ? `${kid.name} needs to finish their jobs first`
             : "That job isn't available anymore"
@@ -1267,11 +1270,16 @@ export default function JobBoard({
   }
 
   async function performRevoke(job: ChoreTemplate) {
+    // Capture BEFORE onRevoke mutates state. Star balances are summed from this array,
+    // so a failed revoke that isn't rolled back leaves the kid's balance reading low
+    // until a full reload — while the database row still exists.
+    const previous = claimByTemplate[job.id];
     onRevoke(job.id);
     setRevoking(null);
     try {
       await revokeJob(job.id, today);
     } catch {
+      if (previous) onClaim(previous);
       setToast("Couldn't undo that — try again");
       setTimeout(() => setToast(null), 2600);
     }
