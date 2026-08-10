@@ -65,6 +65,8 @@ export interface ChoreRecurrence {
   days?: number[]; // 0=Sunday, 1=Monday, etc.
 }
 
+export type ChoreCategory = "expectation" | "extra_work";
+
 export interface ChoreTemplate {
   id: string;
   family_id: string;
@@ -74,6 +76,8 @@ export interface ChoreTemplate {
   recurrence: ChoreRecurrence;
   active: boolean;
   created_at: string;
+  category: ChoreCategory;
+  is_special: boolean;
 }
 
 export interface ChoreCompletion {
@@ -84,6 +88,7 @@ export interface ChoreCompletion {
   date: string; // YYYY-MM-DD
   stars_earned: number;
   completed_at: string;
+  category: ChoreCategory;
 }
 
 export interface ChoreTemplateMember {
