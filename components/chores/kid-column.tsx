@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import TodayView from "@/components/chores/today-view";
 import WeekView from "@/components/chores/week-view";
@@ -9,10 +8,9 @@ import MemberAvatar from "@/components/family/member-avatar";
 import { computeStarBalance } from "@/lib/chores";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember, StarRedemption, StarReward } from "@/lib/types";
 
-type ViewType = "today" | "week" | "rewards";
-
 interface KidColumnProps {
   kid: FamilyMember;
+  view: "today" | "week" | "rewards";
   todayTemplates: ChoreTemplate[];
   allTemplates: ChoreTemplate[];
   completionsToday: ChoreCompletion[];
@@ -30,12 +28,10 @@ interface KidColumnProps {
 }
 
 export default function KidColumn({
-  kid, todayTemplates, allTemplates, completionsToday, completionsWeek,
+  kid, view, todayTemplates, allTemplates, completionsToday, completionsWeek,
   allCompletions, rewards, redemptions, familyId, familyPin, today,
   weekStartStr, onComplete, onUncomplete, onRedeem,
 }: KidColumnProps) {
-  const [view, setView] = useState<ViewType>("today");
-
   const starBalance = computeStarBalance(kid.id, allCompletions, redemptions);
   const doneCount = completionsToday.length;
   const totalCount = todayTemplates.length;
@@ -87,34 +83,6 @@ export default function KidColumn({
             familyId={familyId} familyPin={familyPin} onRedeem={onRedeem}
           />
         )}
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: "2px solid #F3EFE0" }}>
-        <div className="flex gap-2">
-          {(["today", "week"] as ViewType[]).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className="px-4 py-1.5 rounded-full text-sm font-semibold capitalize touch-manipulation transition-colors"
-              style={view === v
-                ? { background: "#1C1A14", color: "white" }
-                : { background: "white", color: "#888", border: "2px solid #ddd" }}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => setView(view === "rewards" ? "today" : "rewards")}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold touch-manipulation"
-          style={view === "rewards"
-            ? { background: "#1C1A14", color: "white" }
-            : { background: "#FDCB40", color: "#1C1A14" }}
-        >
-          <Image src="/star-small.png" alt="" width={14} height={14} />
-          {view === "rewards" ? "✕ Close" : "Rewards"}
-        </button>
       </div>
     </div>
   );

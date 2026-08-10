@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import KidColumn from "@/components/chores/kid-column";
-import { templatesForDay } from "@/lib/chores";
+import ViewTabs, { type ChoresView } from "@/components/chores/view-tabs";
+import { expectationsForDay, gateOpen } from "@/lib/chores";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember, StarRedemption, StarReward } from "@/lib/types";
 
 interface ChoresBoardProps {
@@ -13,6 +14,8 @@ interface ChoresBoardProps {
   allCompletions: ChoreCompletion[];
   rewards: StarReward[];
   redemptions: StarRedemption[];
+  jobs: ChoreTemplate[];
+  claimsToday: ChoreCompletion[];
   familyId: string;
   familyPin: string;
   today: string;
@@ -27,6 +30,8 @@ export default function ChoresBoard({
   allCompletions,
   rewards,
   redemptions,
+  jobs,
+  claimsToday,
   familyId,
   familyPin,
   today,
@@ -55,6 +60,21 @@ export default function ChoresBoard({
     setOptRedemptions((p) => [...p, r]);
   }
 
+  const [view, setView] = useState<ChoresView>("today");
+
+  function liveGate(completions: ChoreCompletion[], memberId: string) {
+    return gateOpen(
+      templatesByMember[memberId] ?? [],
+      completions.filter((c) => c.member_id === memberId),
+      today
+    );
+  }
+
+  const liveGateByKid: Record<string, boolean> = Object.fromEntries(
+    kids.map((k) => [k.id, liveGate(optToday, k.id)])
+  );
+  const allLocked = kids.every((k) => !liveGateByKid[k.id]);
+
   if (kids.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -70,29 +90,38 @@ export default function ChoresBoard({
   const todayDate = new Date(today + "T00:00:00");
 
   return (
-    <div className="flex gap-4 h-full p-4">
-      {kids.map((kid) => {
-        return (
-          <KidColumn
-            key={kid.id}
-            kid={kid}
-            todayTemplates={templatesForDay(templatesByMember[kid.id] ?? [], todayDate)}
-            allTemplates={templatesByMember[kid.id] ?? []}
-            completionsToday={optToday.filter((c) => c.member_id === kid.id)}
-            completionsWeek={optWeek.filter((c) => c.member_id === kid.id)}
-            allCompletions={optAll.filter((c) => c.member_id === kid.id)}
-            rewards={rewards}
-            redemptions={optRedemptions}
-            familyId={familyId}
-            familyPin={familyPin}
-            today={today}
-            weekStartStr={weekStartStr}
-            onComplete={addCompletion}
-            onUncomplete={removeCompletion}
-            onRedeem={addRedemption}
-          />
-        );
-      })}
+    <div className="flex flex-col h-full">
+      <ViewTabs view={view} onChange={setView} allLocked={allLocked} />
+
+      {view === "jobs" ? (
+        <div className="flex-1 p-4 overflow-y-auto">
+          <p className="text-sm text-slate-400">Job board lands in Task 7.</p>
+        </div>
+      ) : (
+        <div className="flex gap-4 flex-1 p-4 overflow-hidden">
+          {kids.map((kid) => (
+            <KidColumn
+              key={kid.id}
+              kid={kid}
+              view={view}
+              todayTemplates={expectationsForDay(templatesByMember[kid.id] ?? [], todayDate)}
+              allTemplates={templatesByMember[kid.id] ?? []}
+              completionsToday={optToday.filter((c) => c.member_id === kid.id)}
+              completionsWeek={optWeek.filter((c) => c.member_id === kid.id)}
+              allCompletions={optAll.filter((c) => c.member_id === kid.id)}
+              rewards={rewards}
+              redemptions={optRedemptions}
+              familyId={familyId}
+              familyPin={familyPin}
+              today={today}
+              weekStartStr={weekStartStr}
+              onComplete={addCompletion}
+              onUncomplete={removeCompletion}
+              onRedeem={addRedemption}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
