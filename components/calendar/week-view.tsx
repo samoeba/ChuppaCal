@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { layoutTimedEvents } from "@/lib/calendar-layout";
 import CurrentTimeIndicator from "@/components/calendar/current-time-indicator";
 import EventChip from "@/components/calendar/event-chip";
 import EventDetailPopover from "@/components/calendar/event-detail-popover";
@@ -19,6 +21,7 @@ import {
   groupEventsByDay,
   isToday,
   startOfDay,
+  toDateParam,
 } from "@/lib/calendar";
 
 // NOTE: Tailwind JIT can't evaluate template literals. If WEEK_VIEW_DAYS changes,
@@ -29,34 +32,6 @@ function hourLabel(h: number): string {
   const h12 = h % 12 === 0 ? 12 : h % 12;
   const suffix = h >= 12 ? "PM" : "AM";
   return `${h12}${suffix}`;
-}
-
-function timedEventPosition(
-  ev: EventWithMember,
-  day: Date
-): { top: number; height: number } | null {
-  const start = new Date(ev.start_time);
-  const end = ev.end_time
-    ? new Date(ev.end_time)
-    : new Date(start.getTime() + 30 * 60 * 1000);
-
-  const dayMidnight = new Date(day);
-  dayMidnight.setHours(0, 0, 0, 0);
-  const dayStart = new Date(dayMidnight.getTime() + START_MIN * 60_000);
-  const dayEnd = new Date(dayMidnight.getTime() + END_MIN * 60_000);
-
-  if (end <= dayStart || start >= dayEnd) return null;
-
-  const s = start < dayStart ? dayStart : start;
-  const e = end > dayEnd ? dayEnd : end;
-
-  const startOffsetMin = (s.getTime() - dayStart.getTime()) / 60_000;
-  const durationMin = Math.max(20, (e.getTime() - s.getTime()) / 60_000);
-
-  return {
-    top: startOffsetMin * MIN_PX,
-    height: durationMin * MIN_PX,
-  };
 }
 
 export default function WeekView({
@@ -73,6 +48,7 @@ export default function WeekView({
   const allDayByDay = buckets.map((b) => b.filter((ev) => ev.all_day));
   const timedByDay = buckets.map((b) => b.filter((ev) => !ev.all_day));
   const hasAnyAllDay = allDayByDay.some((d) => d.length > 0);
+  const positioned = timedByDay.map((dayEvents, index) => layoutTimedEvents(dayEvents, days[index], START_MIN, END_MIN, MIN_PX));
 
   const [selected, setSelected] = useState<{
     event: EventWithMember;
@@ -84,7 +60,9 @@ export default function WeekView({
   }
 
   return (
-    <div className="rounded-cc-md bg-cc-white border border-cc-line overflow-hidden">
+    <div className="overflow-x-auto rounded-cc-md bg-cc-white border border-cc-line">
+      <p className="md:hidden text-caption p-2">Swipe horizontally to see all five days.</p>
+      <div className="min-w-[720px]">
       {/* Day headers */}
       <div className={`grid ${GRID_COLS} border-b border-cc-line`}>
         <div />
@@ -109,6 +87,11 @@ export default function WeekView({
               >
                 {dayDate.getDate()}
               </span>
+              {timedByDay[i].length > positioned[i].length && (
+                <Link href={`/calendar?view=day&date=${toDateParam(dayDate)}`} className="text-caption underline" aria-label={`See ${timedByDay[i].length - positioned[i].length} events outside the grid on ${dayDate.toDateString()}`}>
+                  +{timedByDay[i].length - positioned[i].length} outside grid
+                </Link>
+              )}
             </div>
           );
         })}
@@ -182,16 +165,15 @@ export default function WeekView({
                   ))}
 
                   {/* Positioned events */}
-                  {timedByDay[di].map((ev) => {
-                    const pos = timedEventPosition(ev, dayDate);
-                    if (!pos) return null;
+                  {positioned[di].map((pos) => {
+                    const ev = pos.event;
                     return (
                       <button
                         key={ev.id}
                         type="button"
                         onClick={(e) => handleSelect(ev, e.currentTarget)}
-                        className="absolute left-1 right-1 text-left active:scale-[0.98] transition-transform"
-                        style={{ top: pos.top, height: pos.height }}
+                        className="absolute text-left active:scale-[0.98] transition-transform"
+                        style={{ top: pos.top, height: pos.height, left: `calc(${100 * pos.column / pos.columns}% + 3px)`, width: `calc(${100 / pos.columns}% - 6px)` }}
                         aria-label={`Open details for ${ev.title}`}
                       >
                         <EventChip event={ev} />
@@ -207,6 +189,7 @@ export default function WeekView({
             rangeDays={WEEK_VIEW_DAYS}
           />
         </div>
+      </div>
       </div>
 
       {selected && (

@@ -6,6 +6,10 @@ import type { MealPlan, MealSlot } from "@/lib/types";
 import WeekNav from "./week-nav";
 import MealGrid from "./meal-grid";
 import MealModal from "./meal-modal";
+import { useServerState } from "@/lib/use-server-state";
+import { useFamilyRuntime } from "@/components/family-runtime";
+import { civilDate } from "@/lib/time-zone";
+import { addDays, toDateParam } from "@/lib/calendar";
 
 interface Props {
   meals: MealPlan[];
@@ -17,29 +21,28 @@ interface Props {
 type SelectedCell = { date: string; slot: MealSlot; meal?: MealPlan };
 
 function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return toDateParam(d);
 }
 
 function getWeekDays(weekStartStr: string): string[] {
-  const start = new Date(weekStartStr + "T00:00:00");
+  const start = civilDate(weekStartStr);
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
+    const d = addDays(start, i);
     return localDateStr(d);
   });
 }
 
 export default function MealBoard({ meals, mealSlots, familyId, weekStartStr }: Props) {
+  const { timeZone } = useFamilyRuntime();
   const router = useRouter();
-  const [optMeals, setOptMeals] = useState<MealPlan[]>(meals);
+  const [optMeals, setOptMeals] = useServerState(meals);
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
 
   const weekDays = getWeekDays(weekStartStr);
-  const todayStr = localDateStr(new Date());
+  const todayStr = toDateParam(new Date(), timeZone);
 
   function navigate(offsetWeeks: number) {
-    const start = new Date(weekStartStr + "T00:00:00");
-    start.setDate(start.getDate() + offsetWeeks * 7);
+    const start = addDays(civilDate(weekStartStr), offsetWeeks * 7);
     router.push(`/meals?week=${localDateStr(start)}`);
   }
 

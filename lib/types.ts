@@ -6,6 +6,9 @@ export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 export type RecurrenceType = "daily" | "weekdays" | "custom";
 
 export interface FamilySettings {
+  time_zone?: string; // IANA zone, default America/Chicago for existing families
+  sleep_enabled?: boolean;
+  screensaver_enabled?: boolean;
   sleep_start: string; // "HH:mm"
   sleep_end: string; // "HH:mm"
   weather_location: string;
@@ -43,8 +46,14 @@ export interface CalendarConnection {
   calendar_external_id: string | null;
   calendar_name: string | null;
   last_synced_at: string | null;
+  last_sync_attempt_at?: string | null;
+  last_sync_error?: string | null;
+  sync_version?: number;
+  sync_lock_token?: string | null;
   created_at: string;
 }
+
+export type CalendarConnectionSummary = Omit<CalendarConnection, "credentials">;
 
 export interface CalendarEvent {
   id: string;
@@ -121,6 +130,8 @@ export interface MealPlan {
   slot: MealSlot;
   name: string;
   emoji: string | null;
+  recipe_url?: string | null;
+  ingredients?: string[];
   created_at: string;
 }
 

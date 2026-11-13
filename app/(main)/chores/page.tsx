@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ChoresBoard from "@/components/chores/chores-board";
 import { toDateString, startOfWeek } from "@/lib/chores";
+import { readAllRows } from "@/lib/pagination";
+import { loadFamily } from "@/lib/load-family";
+import { familyTimeZone, zonedDate } from "@/lib/time-zone";
+import { addDays } from "@/lib/calendar";
 import type {
   ChoreCompletion,
   ChoreTemplate,
@@ -26,54 +30,52 @@ export default async function ChoresPage() {
   if (!selfMember) redirect("/onboarding");
 
   const familyId = selfMember.family_id;
-  const today = new Date();
+  const { family } = await loadFamily();
+  const today = zonedDate(new Date(), familyTimeZone(family.settings.time_zone));
   const todayStr = toDateString(today);
   const weekStart = startOfWeek(today);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekEnd = addDays(weekStart, 6);
 
   const [
-    { data: members },
-    { data: templates },
-    { data: templateMembers },
-    { data: completionsToday },
-    { data: completionsWeek },
-    { data: allCompletions },
-    { data: rewards },
-    { data: redemptions },
-    { data: family },
+    members,
+    templates,
+    templateMembers,
+    completionsToday,
+    completionsWeek,
+    allCompletions,
+    rewards,
+    redemptions,
   ] = await Promise.all([
-    supabase
+    readAllRows<FamilyMember>((from, to) => supabase
       .from("family_members")
       .select("*")
       .eq("family_id", familyId)
       .eq("role", "child")
       .eq("chores_enabled", true)
-      .order("created_at"),
-    supabase
+      .order("created_at").order("id").range(from, to)),
+    readAllRows<ChoreTemplate>((from, to) => supabase
       .from("chore_templates")
       .select("*")
       .eq("family_id", familyId)
-      .eq("active", true),
-    supabase.from("chore_template_members").select("*"),
-    supabase
+      .eq("active", true).order("id").range(from, to)),
+    readAllRows<ChoreTemplateMember>((from, to) => supabase.from("chore_template_members").select("*").order("template_id").order("member_id").range(from, to)),
+    readAllRows<ChoreCompletion>((from, to) => supabase
       .from("chore_completions")
       .select("*")
       .eq("family_id", familyId)
-      .eq("date", todayStr),
-    supabase
+      .eq("date", todayStr).order("id").range(from, to)),
+    readAllRows<ChoreCompletion>((from, to) => supabase
       .from("chore_completions")
       .select("*")
       .eq("family_id", familyId)
       .gte("date", toDateString(weekStart))
-      .lte("date", toDateString(weekEnd)),
-    supabase
+      .lte("date", toDateString(weekEnd)).order("id").range(from, to)),
+    readAllRows<ChoreCompletion>((from, to) => supabase
       .from("chore_completions")
-      .select("id,member_id,stars_earned,template_id,date,family_id,completed_at")
-      .eq("family_id", familyId),
-    supabase.from("star_rewards").select("*").eq("family_id", familyId).order("star_cost"),
-    supabase.from("star_redemptions").select("*").eq("family_id", familyId),
-    supabase.from("families").select("settings").eq("id", familyId).single(),
+      .select("*")
+      .eq("family_id", familyId).order("id").range(from, to)),
+    readAllRows<StarReward>((from, to) => supabase.from("star_rewards").select("*").eq("family_id", familyId).order("star_cost").order("id").range(from, to)),
+    readAllRows<StarRedemption>((from, to) => supabase.from("star_redemptions").select("*").eq("family_id", familyId).order("id").range(from, to)),
   ]);
 
   const allTemplates = (templates ?? []) as ChoreTemplate[];
@@ -98,7 +100,7 @@ export default async function ChoresPage() {
   const claimsToday = todayCompletions.filter((c) => c.category === "extra_work");
 
   type FamilyRow = { settings: { pin_hash: string | null } };
-  const pinHash = ((family as FamilyRow | null)?.settings?.pin_hash) ?? "0000";
+  const pinHash = ((family as FamilyRow | null)?.settings?.pin_hash) ?? "";
 
   return (
     <ChoresBoard

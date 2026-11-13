@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PinGate from "@/components/pin-gate";
-import type { CalendarConnection, ChoreTemplate, ChoreTemplateMember, Family, FamilyMember, List, StarReward } from "@/lib/types";
+import type { CalendarConnectionSummary, ChoreTemplate, ChoreTemplateMember, Family, FamilyMember, List, StarReward } from "@/lib/types";
 import ChoreTemplatesSection from "@/components/settings/chore-templates-section";
 import ExtraWorkSection from "@/components/settings/extra-work-section";
 import StarRewardsSection from "@/components/settings/star-rewards-section";
 import MealSlotsSection from "@/components/settings/meal-slots-section";
 import ListsSection from "@/components/settings/lists-section";
 import KioskModeSection from "@/components/settings/kiosk-mode-section";
+import { updateDisplaySettings } from "@/app/actions/settings";
+import DisplaySettingsSection from "@/components/settings/display-settings-section";
+import { clearOfflineSnapshot } from "@/components/offline-snapshot";
+import CalendarConnectionControls from "@/components/settings/calendar-connection-controls";
 import MemberAvatar from "@/components/family/member-avatar";
 import PhotoCropModal from "@/components/family/photo-crop-modal";
 import { toggleChoresEnabled } from "@/app/actions/chores";
+import { useDialog } from "@/lib/use-dialog";
 
 const COLORS = [
   "#4ecdc4", "#ff6b6b", "#a78bfa", "#ffd93d",
@@ -25,9 +31,13 @@ const AVATARS = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [family, setFamily] = useState<Family | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [connections, setConnections] = useState<CalendarConnection[]>([]);
+  const [connections, setConnections] = useState<CalendarConnectionSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [savingMember, setSavingMember] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAddMember, setShowAddMember] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
@@ -40,6 +50,7 @@ export default function SettingsPage() {
   const [memberPhotoUrl, setMemberPhotoUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
+  const memberDialog = useDialog(showAddMember, savingMember || uploadingPhoto ? undefined : () => setShowAddMember(false));
 
   // Display settings
   const [weatherLocation, setWeatherLocation] = useState("");
@@ -49,42 +60,32 @@ export default function SettingsPage() {
   const [rewards, setRewards] = useState<StarReward[]>([]);
   const [lists, setLists] = useState<List[]>([]);
 
-  const supabase = createClient();
+  const [supabase] = useState(createClient);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) throw new Error("Please sign in again");
 
-      const { data: member } = await supabase
+      const { data: member, error: memberError } = await supabase
         .from("family_members")
         .select("family_id")
         .eq("user_id", user.id)
         .single();
 
-      if (!member) return;
+      if (memberError || !member) throw new Error("Could not load your family membership");
 
-      const { data: familyData } = await supabase
-        .from("families")
-        .select("*")
-        .eq("id", member.family_id)
-        .single();
-
-      const { data: membersData } = await supabase
-        .from("family_members")
-        .select("*")
-        .eq("family_id", member.family_id)
-        .order("created_at");
-
-      const { data: connectionsData } = await supabase
-        .from("calendar_connections")
-        .select("*")
-        .eq("family_id", member.family_id)
-        .order("created_at");
+      const responses = await Promise.all([
+        supabase.from("families").select("*").eq("id", member.family_id).single(),
+        supabase.from("family_members").select("*").eq("family_id", member.family_id).order("created_at"),
+        // Credentials must never be downloaded by the settings UI.
+        supabase.from("calendar_connections").select("id,family_id,member_id,provider,calendar_external_id,calendar_name,last_synced_at,last_sync_attempt_at,last_sync_error,created_at").eq("family_id", member.family_id).order("created_at"),
+        supabase.from("chore_templates").select("*").eq("family_id", member.family_id).eq("active", true).order("created_at"),
+        supabase.from("star_rewards").select("*").eq("family_id", member.family_id).order("star_cost"),
+        supabase.from("lists").select("*").eq("family_id", member.family_id).order("sort_order").order("created_at"),
+      ]);
+      if (responses.some((response) => response.error)) throw new Error("Could not load all settings. Please retry.");
+      const [{ data: familyData }, { data: membersData }, { data: connectionsData }, { data: templatesData }, { data: rewardsData }, { data: listsData }] = responses;
 
       if (connectionsData) setConnections(connectionsData);
 
@@ -94,26 +95,14 @@ export default function SettingsPage() {
       }
       if (membersData) setMembers(membersData);
 
-      const { data: templatesData } = await supabase
-        .from("chore_templates")
-        .select("*")
-        .eq("family_id", member.family_id)
-        .eq("active", true)
-        .order("created_at");
-
       const templateIds = (templatesData ?? []).map((t: ChoreTemplate) => t.id);
-      const { data: templateMembersData } = templateIds.length > 0
+      const { data: templateMembersData, error: assignmentsError } = templateIds.length > 0
         ? await supabase
             .from("chore_template_members")
             .select("*")
             .in("template_id", templateIds)
-        : { data: [] };
-
-      const { data: rewardsData } = await supabase
-        .from("star_rewards")
-        .select("*")
-        .eq("family_id", member.family_id)
-        .order("star_cost");
+        : { data: [], error: null };
+      if (assignmentsError) throw new Error("Could not load chore assignments");
 
       const loaded = (templatesData ?? []) as ChoreTemplate[];
       const expectations = loaded.filter((t) => t.category === "expectation");
@@ -128,39 +117,64 @@ export default function SettingsPage() {
       );
       if (rewardsData) setRewards(rewardsData as StarReward[]);
 
-      const { data: listsData } = await supabase
-        .from("lists")
-        .select("*")
-        .eq("family_id", member.family_id)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true });
       if (listsData) setLists(listsData as List[]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not load settings");
     } finally {
       setLoading(false);
     }
+  }, [supabase]);
+
+  useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => {
+    const refresh = () => { void loadData(); };
+    window.addEventListener("chuppacal-refresh-settings", refresh);
+    return () => window.removeEventListener("chuppacal-refresh-settings", refresh);
+  }, [loadData]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("gcal_error")) setError("Google Calendar could not be connected. Please try connecting again and allow calendar access.");
+    if (params.has("gcal_connected")) setStatus("Google Calendar connected. Events will appear after the next sync.");
+  }, []);
+
+  async function runMutation(work: () => Promise<void>) {
+    setError(null);
+    setStatus(null);
+    try { await work(); } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save changes. Please retry.");
+    }
   }
 
-  async function updateConnection(id: string, fields: Partial<CalendarConnection>) {
-    await fetch(`/api/calendar/connections/${id}`, {
+  async function updateConnection(id: string, fields: Partial<CalendarConnectionSummary>) {
+    await runMutation(async () => {
+    const response = await fetch(`/api/calendar/connections/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(fields),
     });
-    loadData();
+    if (!response.ok) throw new Error("Could not update the calendar connection. Please retry.");
+    await loadData();
+    });
   }
 
-  async function disconnectConnection(conn: CalendarConnection) {
+  async function disconnectConnection(conn: CalendarConnectionSummary) {
     if (!confirm(`Disconnect ${conn.calendar_name || conn.provider}?`)) return;
-    await fetch(`/api/calendar/connections/${conn.id}`, { method: "DELETE" });
-    loadData();
+    await runMutation(async () => {
+      const response = await fetch(`/api/calendar/connections/${conn.id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Could not disconnect the calendar. Please retry.");
+      await loadData();
+    });
   }
 
   async function saveWeatherLocation() {
     if (!family) return;
     setSavingWeather(true);
-    const nextSettings = { ...family.settings, weather_location: weatherLocation };
-    await supabase.from("families").update({ settings: nextSettings }).eq("id", family.id);
-    setFamily({ ...family, settings: nextSettings });
+    await runMutation(async () => {
+      const nextSettings = await updateDisplaySettings({ weather_location: weatherLocation.trim() });
+      setFamily({ ...family, settings: nextSettings });
+      setStatus("Weather location saved.");
+    });
     setSavingWeather(false);
   }
 
@@ -203,38 +217,47 @@ export default function SettingsPage() {
   }
 
   async function saveMember() {
-    if (!family || !memberName.trim()) return;
+    if (!family || !memberName.trim() || savingMember) return;
+    setSavingMember(true);
+    await runMutation(async () => {
 
     if (editingMember) {
-      await supabase
+      const { error } = await supabase
         .from("family_members")
         .update({
-          name: memberName,
+          name: memberName.trim(),
           color: memberColor,
           avatar_emoji: memberAvatar,
           avatar_url: memberPhotoUrl,
           role: memberRole,
         })
         .eq("id", editingMember.id);
+      if (error) throw new Error("Could not save this family member. Please retry.");
     } else {
-      await supabase.from("family_members").insert({
+      const { error } = await supabase.from("family_members").insert({
         family_id: family.id,
-        name: memberName,
+        name: memberName.trim(),
         color: memberColor,
         avatar_emoji: memberAvatar,
         avatar_url: memberPhotoUrl,
         role: memberRole,
       });
+      if (error) throw new Error("Could not add this family member. Please retry.");
     }
 
     setShowAddMember(false);
-    loadData();
+    await loadData();
+    });
+    setSavingMember(false);
   }
 
   async function deleteMember(member: FamilyMember) {
     if (!confirm(`Remove ${member.name} from the family?`)) return;
-    await supabase.from("family_members").delete().eq("id", member.id);
-    loadData();
+    await runMutation(async () => {
+      const { error } = await supabase.from("family_members").delete().eq("id", member.id);
+      if (error) throw new Error("Could not remove this family member. Please retry.");
+      await loadData();
+    });
   }
 
   function getInviteLink() {
@@ -244,14 +267,21 @@ export default function SettingsPage() {
 
   async function copyInviteLink() {
     const link = getInviteLink();
-    await navigator.clipboard.writeText(link);
-    alert("Invite link copied to clipboard!");
+    await runMutation(async () => {
+      await navigator.clipboard.writeText(link);
+      setStatus("Invite link copied to clipboard.");
+    });
   }
 
   async function signOut() {
     if (!confirm("Sign out? You'll need to sign back in with your Google account.")) return;
-    await supabase.auth.signOut();
-    window.location.href = "/login";
+    await runMutation(async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw new Error("Could not sign out. Please retry.");
+      clearOfflineSnapshot();
+      router.replace("/login");
+      router.refresh();
+    });
   }
 
   if (loading) {
@@ -265,17 +295,20 @@ export default function SettingsPage() {
   if (!family) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">No family found</p>
+        <p role="alert" className="text-slate-600">{error ?? "No family found"}</p>
+        <button onClick={() => { setError(null); void loadData(); }} className="ml-4 px-4 py-3 rounded-xl bg-cc-ink text-white">Retry</button>
       </div>
     );
   }
 
-  const pinHash = family.settings.pin_hash ?? "0000";
+  const pinHash = family.settings.pin_hash ?? "";
 
   return (
     <PinGate familyPin={pinHash}>
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">⚙️ Settings</h1>
+        {error && <p role="alert" className="text-red-700 mb-4">{error}</p>}
+        {status && <p role="status" className="text-green-800 mb-4">{status}</p>}
 
         {/* Family Members */}
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
@@ -310,8 +343,10 @@ export default function SettingsPage() {
                 {member.role === "child" && (
                   <button
                     onClick={async () => {
-                      await toggleChoresEnabled(member.id, !member.chores_enabled);
-                      loadData();
+                      await runMutation(async () => {
+                        await toggleChoresEnabled(member.id, !member.chores_enabled);
+                        await loadData();
+                      });
                     }}
                     className={`text-xs px-2 py-1 rounded-lg font-semibold touch-manipulation ${
                       member.chores_enabled ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400"
@@ -326,6 +361,7 @@ export default function SettingsPage() {
                 />
                 <button
                   onClick={() => openEditMember(member)}
+                  aria-label={`Edit ${member.name}`}
                   className="text-slate-400 hover:text-slate-600 p-2 touch-manipulation"
                 >
                   ✏️
@@ -333,6 +369,7 @@ export default function SettingsPage() {
                 {!member.user_id && (
                   <button
                     onClick={() => deleteMember(member)}
+                    aria-label={`Remove ${member.name}`}
                     className="text-slate-400 hover:text-rose-500 p-2 touch-manipulation"
                   >
                     🗑️
@@ -349,7 +386,7 @@ export default function SettingsPage() {
             <h2 className="text-lg font-semibold text-slate-900">Calendar Connections</h2>
           </div>
           <p className="text-sm text-slate-400 mb-4">
-            Link Google Calendar or Hey (CalDAV) accounts. Events sync every 5 minutes and
+            Link Google Calendar accounts. Events sync approximately every 5 minutes and
             appear color-coded by the assigned family member.
           </p>
 
@@ -358,11 +395,10 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-2 mb-4">
               {connections.map((conn) => {
-                const assigned = members.find((m) => m.id === conn.member_id);
                 return (
                   <div
                     key={conn.id}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-slate-100"
+                    className="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-slate-100"
                   >
                     <div className="text-xl">{conn.provider === "google" ? "📆" : "📅"}</div>
                     <div className="flex-1 min-w-0">
@@ -378,6 +414,7 @@ export default function SettingsPage() {
                     </div>
                     <select
                       value={conn.member_id ?? ""}
+                      aria-label={`Family member for ${conn.calendar_name || conn.provider}`}
                       onChange={(e) =>
                         updateConnection(conn.id, { member_id: e.target.value })
                       }
@@ -391,10 +428,12 @@ export default function SettingsPage() {
                     </select>
                     <button
                       onClick={() => disconnectConnection(conn)}
+                      aria-label={`Disconnect ${conn.calendar_name || conn.provider}`}
                       className="text-slate-400 hover:text-rose-500 p-2 touch-manipulation"
                     >
                       🗑️
                     </button>
+                    <CalendarConnectionControls connection={conn} onChanged={loadData} />
                   </div>
                 );
               })}
@@ -437,6 +476,7 @@ export default function SettingsPage() {
         <ListsSection initialLists={lists} />
 
         <KioskModeSection />
+        <DisplaySettingsSection settings={family.settings} />
 
         {/* Display / Weather */}
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
@@ -447,6 +487,8 @@ export default function SettingsPage() {
           <div className="flex gap-2">
             <input
               type="text"
+              aria-label="Weather city or ZIP"
+              data-unsaved={weatherLocation !== (family.settings.weather_location ?? "")}
               value={weatherLocation}
               onChange={(e) => setWeatherLocation(e.target.value)}
               placeholder="e.g. Austin, TX or 78701"
@@ -495,18 +537,19 @@ export default function SettingsPage() {
         {/* Add/Edit Member Modal */}
         {showAddMember && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <div ref={memberDialog} role="dialog" aria-modal="true" aria-label={editingMember ? "Edit member" : "Add family member"} aria-busy={savingMember || uploadingPhoto} tabIndex={-1} className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">
                 {editingMember ? "Edit Member" : "Add Family Member"}
               </h3>
 
               <input
                 type="text"
+                aria-label="Member name"
+                maxLength={100}
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="Name"
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                autoFocus
               />
 
               {/* Role */}
@@ -514,6 +557,7 @@ export default function SettingsPage() {
                 {(["parent", "child"] as const).map((role) => (
                   <button
                     key={role}
+                    aria-pressed={memberRole === role}
                     onClick={() => setMemberRole(role)}
                     className={`flex-1 py-2 rounded-xl text-sm font-semibold capitalize transition-colors touch-manipulation ${
                       memberRole === role
@@ -532,8 +576,10 @@ export default function SettingsPage() {
                 {COLORS.map((color) => (
                   <button
                     key={color}
+                    aria-label={`Use color ${color}`}
+                    aria-pressed={memberColor === color}
                     onClick={() => setMemberColor(color)}
-                    className={`w-9 h-9 rounded-full touch-manipulation ${
+                    className={`w-11 h-11 rounded-full touch-manipulation ${
                       memberColor === color
                         ? "ring-2 ring-slate-900 ring-offset-2 scale-110"
                         : ""
@@ -567,11 +613,14 @@ export default function SettingsPage() {
                     <input
                       type="file"
                       accept="image/*"
-                      className="hidden"
+                      className="block w-full mt-2 text-xs"
+                      aria-label="Family member photo"
                       disabled={uploadingPhoto}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) setCropFile(file);
+                        if (file && (!file.type.startsWith("image/") || file.size > 10 * 1024 * 1024)) {
+                          setError("Choose an image smaller than 10 MB.");
+                        } else if (file) setCropFile(file);
                         e.target.value = "";
                       }}
                     />
@@ -595,8 +644,10 @@ export default function SettingsPage() {
                 {AVATARS.map((emoji) => (
                   <button
                     key={emoji}
+                    aria-label={`Use ${emoji} avatar`}
+                    aria-pressed={memberAvatar === emoji}
                     onClick={() => setMemberAvatar(emoji)}
-                    className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center touch-manipulation ${
+                    className={`w-11 h-11 rounded-lg text-xl flex items-center justify-center touch-manipulation ${
                       memberAvatar === emoji
                         ? "bg-slate-200 ring-2 ring-rose-500"
                         : "bg-slate-50"
@@ -607,8 +658,10 @@ export default function SettingsPage() {
                 ))}
               </div>
 
+              {error && <p role="alert" className="mb-3 text-red-700">{error}</p>}
               <div className="flex gap-2">
                 <button
+                  disabled={savingMember || uploadingPhoto}
                   onClick={() => setShowAddMember(false)}
                   className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold touch-manipulation"
                 >
@@ -616,6 +669,7 @@ export default function SettingsPage() {
                 </button>
                 <button
                   onClick={saveMember}
+                  disabled={savingMember || uploadingPhoto || !memberName.trim()}
                   className="flex-1 bg-rose-500 text-white py-3 rounded-xl font-semibold touch-manipulation"
                 >
                   {editingMember ? "Save" : "Add"}

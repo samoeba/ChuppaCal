@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { National_Park, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import TouchKeyboardProvider from "@/components/keyboard/touch-keyboard-provider";
 
-const nationalPark = National_Park({
+const nationalPark = localFont({
+  src: "../node_modules/@fontsource-variable/national-park/files/national-park-latin-wght-normal.woff2",
   variable: "--font-national-park",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "200 800",
   display: "swap",
+  adjustFontFallback: false,
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "100 900",
   display: "swap",
 });
 

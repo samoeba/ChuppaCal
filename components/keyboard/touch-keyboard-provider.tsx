@@ -35,6 +35,10 @@ export default function TouchKeyboardProvider({
   children: React.ReactNode;
 }) {
   const kiosk = useKioskMode();
+  useEffect(() => {
+    document.documentElement.dataset.kiosk = String(kiosk);
+    return () => { delete document.documentElement.dataset.kiosk; };
+  }, [kiosk]);
   const [focused, setFocused] = useState<FocusableInput | null>(null);
   const [exiting, setExiting] = useState(false);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,7 +105,6 @@ export default function TouchKeyboardProvider({
       return;
     }
     if (previouslyDesired) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExiting(true);
       exitTimer.current = setTimeout(() => {
         setExiting(false);

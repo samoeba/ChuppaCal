@@ -1,7 +1,9 @@
 import type { ChoreCompletion, ChoreRecurrence, ChoreTemplate, StarRedemption } from "@/lib/types";
+import { civilDate, zonedDate } from "@/lib/time-zone";
+import { toDateParam } from "@/lib/calendar";
 
 export function isScheduledToday(recurrence: ChoreRecurrence, date: Date): boolean {
-  const day = date.getDay();
+  const day = zonedDate(date).getDay();
   switch (recurrence.type) {
     case "daily": return true;
     case "weekdays": return day >= 1 && day <= 5;
@@ -10,14 +12,11 @@ export function isScheduledToday(recurrence: ChoreRecurrence, date: Date): boole
 }
 
 export function toDateString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return toDateParam(date);
 }
 
 export function startOfWeek(date: Date): Date {
-  const d = new Date(date);
+  const d = zonedDate(date);
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
@@ -56,7 +55,7 @@ export function gateOpen(
   memberCompletions: ChoreCompletion[],
   dateStr: string
 ): boolean {
-  const due = expectationsForDay(memberTemplates, new Date(dateStr + "T00:00:00"));
+  const due = expectationsForDay(memberTemplates, civilDate(dateStr));
   if (due.length === 0) return true;
   const doneIds = new Set(
     memberCompletions.filter((c) => c.date === dateStr).map((c) => c.template_id)

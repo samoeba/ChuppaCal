@@ -2,20 +2,15 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import MealBoard from "@/components/meals/meal-board";
 import type { MealPlan, MealSlot, FamilySettings } from "@/lib/types";
+import { loadFamily } from "@/lib/load-family";
+import { familyTimeZone } from "@/lib/time-zone";
+import { addDays, parseDate, toDateParam } from "@/lib/calendar";
+import { startOfWeek } from "@/lib/chores";
 
 export const dynamic = "force-dynamic";
 
 function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function getMondayOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay(); // 0 = Sun
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return toDateParam(d);
 }
 
 export default async function MealsPage({
@@ -40,21 +35,17 @@ export default async function MealsPage({
 
   const familyId = selfMember.family_id;
 
-  const weekStart = week
-    ? new Date(week + "T00:00:00")
-    : getMondayOfWeek(new Date());
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 6);
+  const { family } = await loadFamily();
+  const weekStart = startOfWeek(parseDate(week, familyTimeZone(family.settings.time_zone)));
+  const weekEnd = addDays(weekStart, 6);
 
-  const [{ data: family }, { data: meals }] = await Promise.all([
-    supabase.from("families").select("settings").eq("id", familyId).single(),
-    supabase
+  const { data: meals, error: mealsError } = await supabase
       .from("meal_plans")
       .select("*")
       .eq("family_id", familyId)
       .gte("date", localDateStr(weekStart))
-      .lte("date", localDateStr(weekEnd)),
-  ]);
+      .lte("date", localDateStr(weekEnd));
+  if (mealsError) throw new Error("Could not load meal plans");
 
   type FamilyRow = { settings: FamilySettings };
   const settings = (family as FamilyRow | null)?.settings;
@@ -67,6 +58,7 @@ export default async function MealsPage({
 
   return (
     <MealBoard
+      key={localDateStr(weekStart)}
       meals={(meals ?? []) as MealPlan[]}
       mealSlots={mealSlots}
       familyId={familyId}

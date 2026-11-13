@@ -4,13 +4,14 @@ import { useState, useTransition } from "react";
 import type { List } from "@/lib/types";
 import ListEditModal from "./list-edit-modal";
 import { deleteList } from "@/app/actions/lists";
+import { useServerState } from "@/lib/use-server-state";
 
 interface Props {
   initialLists: List[];
 }
 
 export default function ListsSection({ initialLists }: Props) {
-  const [lists, setLists] = useState<List[]>(initialLists);
+  const [lists, setLists] = useServerState(initialLists);
   const [editing, setEditing] = useState<List | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);

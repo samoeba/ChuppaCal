@@ -2,7 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ListsBoard from "@/components/lists/lists-board";
-import { seedDefaultsIfEmpty } from "@/app/actions/lists";
+import { readAllRows } from "@/lib/pagination";
 import type { List, ListItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,35 +23,23 @@ export default async function ListsPage() {
 
   const familyId = selfMember.family_id;
 
-  let { data: lists } = await supabase
+  const lists = await readAllRows<List>((from, to) => supabase
     .from("lists")
     .select("*")
     .eq("family_id", familyId)
     .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  // One-time backfill for pre-Phase-7 family.
-  if (!lists || lists.length === 0) {
-    await seedDefaultsIfEmpty();
-    const refetch = await supabase
-      .from("lists")
-      .select("*")
-      .eq("family_id", familyId)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true });
-    lists = refetch.data ?? [];
-  }
+    .order("created_at", { ascending: true }).order("id").range(from, to));
 
   const listIds = lists.map((l) => l.id);
-  const { data: items } = listIds.length
-    ? await supabase
+  const items = listIds.length
+    ? await readAllRows<ListItem>((from, to) => supabase
         .from("list_items")
         .select("*")
         .in("list_id", listIds)
         .order("checked", { ascending: true })
         .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true })
-    : { data: [] };
+        .order("created_at", { ascending: true }).order("id").range(from, to))
+    : [];
 
   return (
     <ListsBoard

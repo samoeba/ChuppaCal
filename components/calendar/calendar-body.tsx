@@ -1,35 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useSyncExternalStore } from "react";
 import DayView from "@/components/calendar/day-view";
 import MemberLegend from "@/components/calendar/member-legend";
 import MonthView from "@/components/calendar/month-view";
 import WeekView from "@/components/calendar/week-view";
+import AgendaView from "@/components/calendar/agenda-view";
 import type { EventWithMember } from "@/lib/calendar";
 import type { FamilyMember } from "@/lib/types";
+import { useFamilyRuntime } from "@/components/family-runtime";
+import { zonedDate } from "@/lib/time-zone";
 
 const STORAGE_KEY = "chuppacal_calendar_hidden_members";
+let fallbackHidden = "[]";
 
-// Throttle refetches so a flurry of focus/visibility events doesn't hammer
-// the DB. Sync runs every ~5 min anyway, so 30s is plenty.
-const REFRESH_COOLDOWN_MS = 30_000;
-
-function loadHidden(): string[] {
-  if (typeof window === "undefined") return [];
+function loadHidden(): string {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+    return window.localStorage.getItem(STORAGE_KEY) ?? "[]";
   } catch {
-    return [];
+    return fallbackHidden;
   }
+}
+
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("chuppacal-filter-changed", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("chuppacal-filter-changed", callback);
+  };
+}
+
+function parseHidden(raw: string): Set<string> {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
+  } catch { return new Set(); }
 }
 
 export default function CalendarBody({
   view,
-  date,
+  date: instant,
   members,
   events,
 }: {
@@ -38,45 +49,22 @@ export default function CalendarBody({
   members: FamilyMember[];
   events: EventWithMember[];
 }) {
-  const router = useRouter();
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
-
-  useEffect(() => {
-    setHiddenIds(new Set(loadHidden()));
-  }, []);
-
-  // Refresh server data when the kiosk wakes up or someone returns to the tab.
-  useEffect(() => {
-    let lastRefresh = Date.now();
-
-    function maybeRefresh() {
-      if (document.visibilityState !== "visible") return;
-      const now = Date.now();
-      if (now - lastRefresh < REFRESH_COOLDOWN_MS) return;
-      lastRefresh = now;
-      router.refresh();
-    }
-
-    document.addEventListener("visibilitychange", maybeRefresh);
-    window.addEventListener("focus", maybeRefresh);
-    return () => {
-      document.removeEventListener("visibilitychange", maybeRefresh);
-      window.removeEventListener("focus", maybeRefresh);
-    };
-  }, [router]);
+  const { timeZone } = useFamilyRuntime();
+  const date = zonedDate(instant, timeZone);
+  const hiddenRaw = useSyncExternalStore(subscribe, loadHidden, () => "[]");
+  const hiddenIds = useMemo(() => parseHidden(hiddenRaw), [hiddenRaw]);
 
   function toggle(id: string) {
-    setHiddenIds((prev) => {
-      const next = new Set(prev);
+      const next = new Set(hiddenIds);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      fallbackHidden = JSON.stringify([...next]);
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+        window.localStorage.setItem(STORAGE_KEY, fallbackHidden);
       } catch {
         // ignore quota / disabled storage
       }
-      return next;
-    });
+      window.dispatchEvent(new Event("chuppacal-filter-changed"));
   }
 
   const filtered = useMemo(
@@ -86,7 +74,7 @@ export default function CalendarBody({
 
   return (
     <>
-      {view === "week" && <WeekView date={date} events={filtered} />}
+      {view === "week" && <><div className="md:hidden"><AgendaView date={date} events={filtered} /></div><div className="hidden md:block"><WeekView date={date} events={filtered} /></div></>}
       {view === "day" && <DayView date={date} events={filtered} />}
       {view === "month" && <MonthView date={date} events={filtered} />}
       <MemberLegend members={members} hiddenIds={hiddenIds} onToggle={toggle} />

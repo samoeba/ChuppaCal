@@ -1,0 +1,27 @@
+# Upload only application/build inputs; never upload local credentials or agent artifacts.
+.env*
+.mcp.json
+/.claude/
+.firecrawl
+/.playwright-mcp/
+/.superpowers/
+/.github/
+/.vercel/
+/.next/
+/node_modules/
+/backups/
+
+# Not used by the production Next.js build.
+/docs/
+/research/
+/scripts/
+/supabase/
+/tests/
+*.tsbuildinfo
+vitest.config.mts
+AGENTS.md
+CLAUDE.md
+README.md
+
+# Keep .npmrc: it contains only legacy-peer-deps=true, required by the
+# existing react-simple-keyboard/React 19 peer-range mismatch during install.

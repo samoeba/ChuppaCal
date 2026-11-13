@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDialog } from "@/lib/use-dialog";
 import { createChoreTemplate, updateChoreTemplate, deleteChoreTemplate } from "@/app/actions/chores";
 import MemberAvatar from "@/components/family/member-avatar";
 import type { ChoreRecurrence, ChoreTemplate, FamilyMember, RecurrenceType } from "@/lib/types";
@@ -20,6 +21,7 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
   const [form, setForm] = useState<Form>(DEFAULT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialog = useDialog(showModal, saving ? undefined : () => setShowModal(false));
 
   function openAdd() {
     setEditing(null);
@@ -36,7 +38,7 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
   }
 
   async function handleSave() {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || saving) return;
     setSaving(true);
     setError(null);
     try {
@@ -105,8 +107,8 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
                   {t.memberIds.length > 0 && <> · {t.memberIds.map((id) => kids.find((k) => k.id === id)?.name).filter(Boolean).join(", ")}</>}
                 </div>
               </div>
-              <button onClick={() => openEdit(t)} className="text-slate-400 hover:text-slate-600 p-2 touch-manipulation">✏️</button>
-              <button onClick={() => handleDelete(t.id)} className="text-slate-400 hover:text-rose-500 p-2 touch-manipulation">🗑️</button>
+              <button aria-label={`Edit ${t.name}`} onClick={() => openEdit(t)} className="text-slate-400 hover:text-slate-600 min-w-11 min-h-11 p-2 touch-manipulation">✏️</button>
+              <button aria-label={`Remove ${t.name}`} onClick={() => handleDelete(t.id)} className="text-slate-400 hover:text-rose-500 min-w-11 min-h-11 p-2 touch-manipulation">🗑️</button>
             </div>
           ))}
         </div>
@@ -120,10 +122,10 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto">
+          <div ref={dialog} role="dialog" aria-modal="true" aria-label={editing ? "Edit chore" : "Add chore"} aria-busy={saving} tabIndex={-1} className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">{editing ? "Edit Chore" : "Add Chore"}</h3>
 
-            <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Chore name" className="w-full border border-slate-200 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-rose-500" autoFocus />
+            <input aria-label="Chore name" maxLength={200} type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Chore name" className="w-full border border-slate-200 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-rose-500" />
 
             <p className="text-sm text-slate-400 mb-2">Icon</p>
             <div className="flex gap-2 flex-wrap mb-4">
@@ -165,7 +167,7 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
             )}
 
             <div className="flex gap-2">
-              <button onClick={() => setShowModal(false)} className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold touch-manipulation">Cancel</button>
+              <button disabled={saving} onClick={() => setShowModal(false)} className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold touch-manipulation">Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.name.trim()} className="flex-1 bg-rose-500 text-white py-3 rounded-xl font-semibold touch-manipulation disabled:opacity-50">{saving ? "Saving…" : editing ? "Save" : "Add"}</button>
             </div>
           </div>

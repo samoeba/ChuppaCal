@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { addDays } from "@/lib/calendar";
+import { useFamilyRuntime } from "@/components/family-runtime";
+import { zonedDate } from "@/lib/time-zone";
 import {
   END_MIN,
   MIN_PX,
@@ -15,16 +18,17 @@ export default function CurrentTimeIndicator({
   rangeStartISO: string;
   rangeDays: number;
 }) {
+  const { timeZone } = useFamilyRuntime();
   const [now, setNow] = useState<Date | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const scrolledRef = useRef(false);
 
   useEffect(() => {
-    const tick = () => setNow(new Date());
+    const tick = () => setNow(zonedDate(Date.now(), timeZone));
     tick();
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [timeZone]);
 
   useEffect(() => {
     if (scrolledRef.current || !now || !ref.current) return;
@@ -45,8 +49,8 @@ export default function CurrentTimeIndicator({
 
   if (!now) return null;
 
-  const rangeStart = new Date(rangeStartISO);
-  const rangeEndMs = rangeStart.getTime() + rangeDays * 24 * 60 * 60 * 1000;
+  const rangeStart = zonedDate(rangeStartISO, timeZone);
+  const rangeEndMs = addDays(rangeStart, rangeDays).getTime();
   if (now.getTime() < rangeStart.getTime() || now.getTime() >= rangeEndMs) {
     return null;
   }
@@ -71,7 +75,7 @@ export default function CurrentTimeIndicator({
         left: 0,
         right: 0,
         height: 0,
-        zIndex: 100,
+        zIndex: 10,
         pointerEvents: "none",
       }}
       aria-label={`Current time ${label}`}

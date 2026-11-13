@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { MealSlot } from "@/lib/types";
 import { updateMealSlots } from "@/app/actions/meals";
+import { useServerState } from "@/lib/use-server-state";
 
 const SLOT_LABELS: Record<MealSlot, string> = {
   breakfast: "Breakfast",
@@ -19,17 +20,23 @@ interface Props {
 }
 
 export default function MealSlotsSection({ familyId, initialSlots }: Props) {
-  const [slots, setSlots] = useState<Record<MealSlot, boolean>>(initialSlots);
+  const [slots, setSlots] = useServerState(initialSlots);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleToggle(slot: MealSlot) {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
     const next = { ...slots, [slot]: !slots[slot] };
     setSlots(next);
     try {
-      await updateMealSlots(familyId, next);
+      await updateMealSlots(familyId, { [slot]: next[slot] });
     } catch (e) {
       setSlots(slots);
       setError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -47,6 +54,8 @@ export default function MealSlotsSection({ familyId, initialSlots }: Props) {
             <button
               role="switch"
               aria-checked={slots[slot]}
+              aria-label={SLOT_LABELS[slot]}
+              disabled={saving}
               onClick={() => handleToggle(slot)}
               className={`relative w-12 h-6 rounded-full transition-colors touch-manipulation ${
                 slots[slot] ? "bg-clover" : "bg-slate-200"

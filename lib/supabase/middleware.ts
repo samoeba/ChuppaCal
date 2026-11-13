@@ -35,10 +35,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Public routes that don't require auth
-  const publicRoutes = ["/login", "/auth/callback", "/api/cron"];
-  const isPublicRoute = publicRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  );
+  const publicRoutes = ["/login", "/auth/callback", "/api/cron/sync-calendars"];
+  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname);
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();

@@ -6,6 +6,7 @@ import JobBoard from "@/components/chores/job-board";
 import UnlockCelebration from "@/components/chores/unlock-celebration";
 import ViewTabs, { type ChoresView } from "@/components/chores/view-tabs";
 import { expectationsForDay, gateOpen } from "@/lib/chores";
+import { civilDate } from "@/lib/time-zone";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember, StarRedemption, StarReward } from "@/lib/types";
 
 interface ChoresBoardProps {
@@ -97,9 +98,10 @@ export default function ChoresBoard({
   // celebration is handled by the gate-transition effect below, NOT here -- updater
   // functions must stay pure (StrictMode may invoke them twice).
   function addCompletion(c: ChoreCompletion) {
-    setOptToday((p) => [...p, c]);
-    setOptWeek((p) => [...p, c]);
-    setOptAll((p) => [...p, c]);
+    const add = (rows: ChoreCompletion[]) => rows.some((row) => row.template_id === c.template_id && row.member_id === c.member_id && row.date === c.date) ? rows : [...rows, c];
+    setOptToday(add);
+    setOptWeek(add);
+    setOptAll(add);
   }
 
   function removeCompletion(templateId: string, memberId: string) {
@@ -111,12 +113,13 @@ export default function ChoresBoard({
   }
 
   function addRedemption(r: StarRedemption) {
-    setOptRedemptions((p) => [...p, r]);
+    setOptRedemptions((p) => p.some((existing) => existing.id === r.id) ? p : [...p, r]);
   }
 
   function addClaim(c: ChoreCompletion) {
-    setOptClaims((p) => [...p, c]);
-    setOptAll((p) => [...p, c]);
+    const add = (rows: ChoreCompletion[]) => rows.some((row) => row.template_id === c.template_id && row.date === c.date && row.category === "extra_work") ? rows : [...rows, c];
+    setOptClaims(add);
+    setOptAll(add);
   }
 
   function removeClaim(templateId: string) {
@@ -175,7 +178,7 @@ export default function ChoresBoard({
     );
   }
 
-  const todayDate = new Date(today + "T00:00:00");
+  const todayDate = civilDate(today);
 
   return (
     <div className="flex flex-col h-full">
@@ -199,7 +202,7 @@ export default function ChoresBoard({
           />
         </div>
       ) : (
-        <div className="flex gap-4 flex-1 p-4 overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-4 flex-1 p-4 overflow-auto">
           {kids.map((kid) => (
             <KidColumn
               key={kid.id}

@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+  const requestedNext = searchParams.get("next") ?? "/";
+  const next = requestedNext.startsWith("/") && !requestedNext.startsWith("//") && !requestedNext.includes("\\") ? requestedNext : "/";
 
   if (code) {
     const supabase = await createClient();
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
           // New user — check for invite token
           const invite = searchParams.get("invite");
           if (invite) {
-            return NextResponse.redirect(`${origin}/onboarding?invite=${invite}`);
+            return NextResponse.redirect(`${origin}/onboarding?invite=${encodeURIComponent(invite)}`);
           }
           // No family yet → onboarding
           return NextResponse.redirect(`${origin}/onboarding`);

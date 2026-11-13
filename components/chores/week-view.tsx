@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { isScheduledToday, toDateString } from "@/lib/chores";
+import { civilDate } from "@/lib/time-zone";
 import type { ChoreCompletion, ChoreTemplate } from "@/lib/types";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -13,7 +14,7 @@ interface WeekViewProps {
 
 export default function WeekView({ allTemplates, completionsWeek, today, weekStartStr }: WeekViewProps) {
   const weekDates: Date[] = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStartStr + "T00:00:00");
+    const d = civilDate(weekStartStr);
     d.setDate(d.getDate() + i);
     return d;
   });

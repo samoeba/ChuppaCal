@@ -7,7 +7,7 @@ import { completeChore, uncompleteChore } from "@/app/actions/chores";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember } from "@/lib/types";
 
 function withViewTransition(cb: () => void) {
-  if (typeof document !== "undefined" && "startViewTransition" in document) {
+  if (typeof document !== "undefined" && "startViewTransition" in document && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     (document as Document & { startViewTransition: (cb: () => void) => unknown }).startViewTransition(() => {
       flushSync(cb);
     });
@@ -84,12 +84,15 @@ export default function ChoreRow({
   return (
     <>
       <div
+        aria-busy={animating}
         className={`flex items-center gap-3 rounded-[20px] px-4 py-2.5 transition-colors ${done ? "bg-green-50" : "bg-white"}`}
         style={{ viewTransitionName: `chore-${kid.id}-${template.id}` }}
       >
         <button
           onClick={done ? () => setShowUndo(true) : handleTap}
           disabled={animating}
+          aria-label={`${done ? "Undo" : "Complete"} ${template.name} for ${kid.name}`}
+          aria-pressed={done}
           className={`w-11 h-11 rounded-full border-[3px] flex items-center justify-center text-xl flex-shrink-0 touch-manipulation transition-all ${
             done ? "bg-[#52C17A] border-[#52C17A] text-white" : "bg-white border-slate-200"
           }`}

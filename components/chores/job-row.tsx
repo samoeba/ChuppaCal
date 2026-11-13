@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import Image from "next/image";
 import MemberAvatar from "@/components/family/member-avatar";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember } from "@/lib/types";
@@ -15,32 +14,14 @@ interface JobRowProps {
 }
 
 export default function JobRow({ job, kids, gateByKid, claim, onOpen, onLongPress }: JobRowProps) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const claimedBy = claim ? kids.find((k) => k.id === claim.member_id) : undefined;
 
-  function startPress() {
-    if (!claim) return;
-    timer.current = setTimeout(onLongPress, 500);
-  }
-  function endPress() {
-    if (timer.current) clearTimeout(timer.current);
-  }
-
-  // The board scrolls. On a touchscreen a scroll fires pointerdown then pointercancel,
-  // and pointerup/pointerleave may never arrive -- without this the 500ms timer
-  // completes and a PIN keypad appears mid-scroll.
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
-
   return (
-    <div
-      onClick={claim ? undefined : onOpen}
-      onPointerDown={startPress}
-      onPointerUp={endPress}
-      onPointerLeave={endPress}
-      onPointerCancel={endPress}
-      className="flex items-center gap-4 rounded-[20px] px-5 py-4 touch-manipulation"
+    <button
+      type="button"
+      aria-label={claim ? `Undo claim for ${job.name}` : `Claim ${job.name}`}
+      onClick={claim ? onLongPress : onOpen}
+      className="w-full text-left flex items-center gap-4 rounded-[20px] px-5 py-4 touch-manipulation"
       style={{ background: claim ? "#A7EB98" : "#FFFFFF" }}
     >
       <div className="text-3xl shrink-0">{job.emoji}</div>
@@ -52,7 +33,7 @@ export default function JobRow({ job, kids, gateByKid, claim, onOpen, onLongPres
         </div>
         {claimedBy && (
           <div className="text-sm font-semibold" style={{ color: "#005C00" }}>
-            {claimedBy.name} claimed this
+            {claimedBy.name} claimed this · Tap to undo
           </div>
         )}
       </div>
@@ -79,6 +60,6 @@ export default function JobRow({ job, kids, gateByKid, claim, onOpen, onLongPres
           ))
         )}
       </div>
-    </div>
+    </button>
   );
 }

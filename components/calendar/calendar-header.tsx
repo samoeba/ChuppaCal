@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useFamilyRuntime } from "@/components/family-runtime";
+import { zonedDate } from "@/lib/time-zone";
 import {
   type CalendarView,
   shiftForView,
@@ -17,7 +19,9 @@ type Props = {
   children?: React.ReactNode;
 };
 
-export default function CalendarHeader({ view, date, children }: Props) {
+export default function CalendarHeader({ view, date: instant, children }: Props) {
+  const { timeZone } = useFamilyRuntime();
+  const date = zonedDate(instant, timeZone);
   const router = useRouter();
 
   const label =
@@ -34,7 +38,7 @@ export default function CalendarHeader({ view, date, children }: Props) {
   }
 
   function jumpToday() {
-    router.push(`/calendar?view=${view}&date=${toDateParam(new Date())}`);
+    router.push(`/calendar?view=${view}&date=${toDateParam(new Date(), timeZone)}`);
   }
 
   return (
@@ -60,23 +64,23 @@ export default function CalendarHeader({ view, date, children }: Props) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => go(-1)}
-          className="w-10 h-10 rounded-cc-pill bg-cc-white border border-cc-line flex items-center justify-center active:bg-cc-beige"
+          className="w-11 h-11 rounded-cc-pill bg-cc-white border border-cc-line flex items-center justify-center active:bg-cc-beige"
           aria-label="Previous"
         >
           ‹
         </button>
         <button
           onClick={jumpToday}
-          className="px-4 h-10 rounded-cc-pill bg-cc-white border border-cc-line text-body active:bg-cc-beige"
+          className="px-4 h-11 rounded-cc-pill bg-cc-white border border-cc-line text-body active:bg-cc-beige"
         >
           Today
         </button>
         <button
           onClick={() => go(1)}
-          className="w-10 h-10 rounded-cc-pill bg-cc-white border border-cc-line flex items-center justify-center active:bg-cc-beige"
+          className="w-11 h-11 rounded-cc-pill bg-cc-white border border-cc-line flex items-center justify-center active:bg-cc-beige"
           aria-label="Next"
         >
           ›
@@ -97,7 +101,8 @@ function ViewToggle({ view, date }: { view: CalendarView; date: Date }) {
           key={v}
           href={`/calendar?view=${v}&date=${dateParam}`}
           scroll={false}
-          className={`px-4 h-8 inline-flex items-center justify-center rounded-cc-pill text-body capitalize ${
+          aria-current={view === v ? "page" : undefined}
+          className={`px-4 h-11 inline-flex items-center justify-center rounded-cc-pill text-body capitalize ${
             view === v ? "bg-cc-ink text-cc-white" : "text-cc-ink-dim"
           }`}
         >

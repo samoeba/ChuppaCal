@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 const COLORS = [
   "#2668FD", // Sky
@@ -63,15 +62,17 @@ function OnboardingContent() {
       return;
     }
     setError("");
+    if (invite) { await handleSetPin(); return; }
     setStep("pin");
   };
 
   const handleSetPin = async () => {
-    if (pin.length !== 4) {
+    if (loading) return;
+    if (!invite && pin.length !== 4) {
       setError("PIN must be 4 digits");
       return;
     }
-    if (pin !== pinConfirm) {
+    if (!invite && pin !== pinConfirm) {
       setError("PINs don't match");
       return;
     }
@@ -109,7 +110,7 @@ function OnboardingContent() {
       <div className="w-full max-w-md">
         {/* Progress indicator */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {(invite ? ["parent", "pin"] : ["family", "parent", "pin"]).map(
+          {(invite ? ["parent"] : ["family", "parent", "pin"]).map(
             (s, i) => (
               <div
                 key={s}
@@ -137,6 +138,8 @@ function OnboardingContent() {
             </p>
             <input
               type="text"
+              aria-label="Family name"
+              maxLength={100}
               value={familyName}
               onChange={(e) => setFamilyName(e.target.value)}
               placeholder="The Casey Family"
@@ -165,6 +168,8 @@ function OnboardingContent() {
 
             <input
               type="text"
+              aria-label="Your name"
+              maxLength={100}
               value={parentName}
               onChange={(e) => setParentName(e.target.value)}
               placeholder="Your name"
@@ -175,10 +180,12 @@ function OnboardingContent() {
             {/* Color picker */}
             <div className="mb-4">
               <p className="text-slate-400 text-sm mb-2">Your color</p>
-              <div className="flex justify-center gap-3">
+              <div className="flex justify-center gap-3 flex-wrap">
                 {COLORS.map((color) => (
                   <button
                     key={color}
+                    aria-label={`Use color ${color}`}
+                    aria-pressed={selectedColor === color}
                     onClick={() => setSelectedColor(color)}
                     className={`w-10 h-10 rounded-full transition-transform touch-manipulation ${
                       selectedColor === color
@@ -198,6 +205,8 @@ function OnboardingContent() {
                 {AVATARS.map((emoji) => (
                   <button
                     key={emoji}
+                    aria-label={`Use ${emoji} avatar`}
+                    aria-pressed={selectedAvatar === emoji}
                     onClick={() => setSelectedAvatar(emoji)}
                     className={`w-12 h-12 rounded-xl text-2xl flex items-center justify-center transition-all touch-manipulation ${
                       selectedAvatar === emoji
@@ -214,9 +223,10 @@ function OnboardingContent() {
             {error && <p className="text-rose-400 text-sm mb-4">{error}</p>}
             <button
               onClick={handleSetParent}
+              disabled={loading}
               className="w-full bg-rose-500 text-white font-semibold py-4 rounded-xl hover:bg-rose-600 active:bg-rose-700 transition-colors touch-manipulation text-lg"
             >
-              Next
+              {loading ? "Joining…" : invite ? "Join family" : "Next"}
             </button>
           </div>
         )}
@@ -235,6 +245,7 @@ function OnboardingContent() {
             <div className="space-y-3 mb-6">
               <input
                 type="password"
+                aria-label="Enter 4-digit PIN"
                 inputMode="numeric"
                 maxLength={4}
                 value={pin}
@@ -245,6 +256,7 @@ function OnboardingContent() {
               />
               <input
                 type="password"
+                aria-label="Confirm PIN"
                 inputMode="numeric"
                 maxLength={4}
                 value={pinConfirm}

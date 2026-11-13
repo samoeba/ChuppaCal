@@ -13,11 +13,18 @@ export default function MemberAvatar({ member, size, emojiClassName = "text-2xl"
 
   if (member.avatar_url) {
     return (
+      // Avatars are already resized to 512px at upload; preserve arbitrary Supabase URLs.
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={member.avatar_url}
         alt={member.name}
         className={`${base} object-cover`}
         style={dim}
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
       />
     );
   }

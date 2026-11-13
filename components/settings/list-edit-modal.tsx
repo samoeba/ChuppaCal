@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { List } from "@/lib/types";
 import { createList, renameList, updateListAppearance } from "@/app/actions/lists";
+import { useDialog } from "@/lib/use-dialog";
 
 const LIST_EMOJIS = [
   "🛒", "✏️", "🛍️", "📝", "🍳", "🧺", "🚗", "🎁",
@@ -26,10 +27,11 @@ export default function ListEditModal({ list, onSaved, onClose }: Props) {
   const [color, setColor] = useState(list?.color ?? LIST_COLORS[0]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const dialog = useDialog(true, pending ? undefined : onClose);
 
   function handleSave() {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || pending) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -53,10 +55,11 @@ export default function ListEditModal({ list, onSaved, onClose }: Props) {
 
   return (
     <div
-      onClick={onClose}
+      onClick={pending ? undefined : onClose}
       className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4"
     >
       <div
+        ref={dialog} role="dialog" aria-modal="true" aria-label={list ? "Edit list" : "New list"} tabIndex={-1} aria-busy={pending}
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-2xl p-6 w-full max-w-sm"
       >
@@ -66,11 +69,11 @@ export default function ListEditModal({ list, onSaved, onClose }: Props) {
 
         <input
           type="text"
+          aria-label="List name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
           placeholder="List name"
-          autoFocus
           className="w-full border border-slate-200 rounded-xl px-4 py-3 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-rose-500"
         />
 
@@ -79,6 +82,7 @@ export default function ListEditModal({ list, onSaved, onClose }: Props) {
           {LIST_EMOJIS.map((e) => (
             <button
               key={e}
+              aria-label={`Use ${e} emoji`} aria-pressed={emoji === e}
               onClick={() => setEmoji(e)}
               className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center touch-manipulation ${
                 emoji === e ? "bg-slate-200 ring-2 ring-rose-500" : "bg-slate-50 active:bg-slate-100"
@@ -94,6 +98,7 @@ export default function ListEditModal({ list, onSaved, onClose }: Props) {
           {LIST_COLORS.map((c) => (
             <button
               key={c}
+              aria-label={`Use color ${c}`} aria-pressed={color === c}
               onClick={() => setColor(c)}
               className={`w-9 h-9 rounded-full touch-manipulation ${
                 color === c ? "ring-2 ring-slate-900 ring-offset-2 scale-110" : ""
@@ -103,7 +108,7 @@ export default function ListEditModal({ list, onSaved, onClose }: Props) {
           ))}
         </div>
 
-        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+        {error && <p role="alert" className="text-red-500 text-sm mb-3">{error}</p>}
 
         <div className="flex gap-2">
           <button

@@ -8,9 +8,13 @@ import {
   parseDate,
   parseView,
   rangeForView,
+  toDateParam,
 } from "@/lib/calendar";
 import { createClient } from "@/lib/supabase/server";
-import type { CalendarEvent, Family, FamilyMember } from "@/lib/types";
+import { readAllRows } from "@/lib/pagination";
+import type { CalendarEvent, FamilyMember } from "@/lib/types";
+import { loadFamily } from "@/lib/load-family";
+import { familyTimeZone } from "@/lib/time-zone";
 
 type SearchParams = Promise<{ view?: string; date?: string }>;
 
@@ -21,7 +25,9 @@ export default async function CalendarPage({
 }) {
   const params = await searchParams;
   const view = parseView(params.view);
-  const date = parseDate(params.date);
+  const { family } = await loadFamily();
+  const timeZone = familyTimeZone(family.settings.time_zone);
+  const date = parseDate(params.date, timeZone);
 
   const supabase = await createClient();
   const {
@@ -40,26 +46,27 @@ export default async function CalendarPage({
   const familyId = viewer.family_id as string;
 
   const { start, end } = rangeForView(view, date);
+  // All-day values encode civil dates at UTC midnight, while timed events are instants.
+  // Query their union and let the day buckets apply precise, exclusive boundaries.
+  const queryStart = new Date(Math.min(+start, +new Date(toDateParam(start) + "T00:00:00Z")));
+  const queryEnd = new Date(Math.max(+end, +new Date(toDateParam(end) + "T00:00:00Z")));
 
-  const [familyRes, membersRes, eventsRes] = await Promise.all([
-    supabase.from("families").select("*").eq("id", familyId).single(),
+  const [membersRes, events] = await Promise.all([
     supabase
       .from("family_members")
       .select("*")
       .eq("family_id", familyId)
       .order("created_at"),
-    supabase
+    readAllRows<CalendarEvent>((from, to) => supabase
       .from("calendar_events")
       .select("*")
       .eq("family_id", familyId)
-      .gte("start_time", start.toISOString())
-      .lt("start_time", end.toISOString())
-      .order("start_time"),
+      .gte("end_time", queryStart.toISOString())
+      .lt("start_time", queryEnd.toISOString())
+      .order("start_time").order("id").range(from, to)),
   ]);
-
-  const family = familyRes.data as Family | null;
+  if (membersRes.error) throw new Error("Could not load the family calendar");
   const members = (membersRes.data ?? []) as FamilyMember[];
-  const events = (eventsRes.data ?? []) as CalendarEvent[];
 
   const membersById = new Map(members.map((m) => [m.id, m]));
   const enriched: EventWithMember[] = events.map((ev) => ({
@@ -77,9 +84,9 @@ export default async function CalendarPage({
         </Suspense>
       </div>
 
-      <CalendarHeader view={view} date={date} />
+      <CalendarHeader view={view} date={new Date(+date)} />
 
-      <CalendarBody view={view} date={date} members={members} events={enriched} />
+      <CalendarBody view={view} date={new Date(+date)} members={members} events={enriched} />
     </div>
   );
 }

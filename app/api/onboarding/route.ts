@@ -1,115 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireColor, requireId, requireText } from "@/lib/validation";
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  let input;
   try {
-    // Verify the user is authenticated
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { familyName, parentName, color, avatarEmoji, pin, invite } = body;
-
-    // Use service role client to bypass RLS for initial setup
-    const admin = createServiceClient();
-
-    if (invite) {
-      // Join existing family
-      const { data: family, error: familyError } = await admin
-        .from("families")
-        .select("id")
-        .eq("id", invite)
-        .single();
-
-      if (familyError || !family) {
-        return NextResponse.json({ error: "Invalid invite link" }, { status: 400 });
-      }
-
-      const { error: memberError } = await admin
-        .from("family_members")
-        .insert({
-          family_id: family.id,
-          user_id: user.id,
-          name: parentName,
-          color,
-          avatar_emoji: avatarEmoji,
-          role: "parent",
-        });
-
-      if (memberError) {
-        return NextResponse.json({ error: memberError.message }, { status: 500 });
-      }
-
-      return NextResponse.json({ familyId: family.id });
-    }
-
-    // Create new family
-    const { data: family, error: familyError } = await admin
-      .from("families")
-      .insert({
-        name: familyName,
-        settings: {
-          sleep_start: "22:00",
-          sleep_end: "06:00",
-          weather_location: "",
-          screensaver_timeout_minutes: 5,
-          meal_slots: {
-            breakfast: true,
-            lunch: true,
-            dinner: true,
-            snack: false,
-          },
-          pin_hash: pin,
-        },
-      })
-      .select()
-      .single();
-
-    if (familyError || !family) {
-      return NextResponse.json(
-        { error: familyError?.message || "Failed to create family" },
-        { status: 500 }
-      );
-    }
-
-    // Add first parent
-    const { error: memberError } = await admin
-      .from("family_members")
-      .insert({
-        family_id: family.id,
-        user_id: user.id,
-        name: parentName,
-        color,
-        avatar_emoji: avatarEmoji,
-        role: "parent",
-      });
-
-    if (memberError) {
-      // Rollback: delete the family
-      await admin.from("families").delete().eq("id", family.id);
-      return NextResponse.json({ error: memberError.message }, { status: 500 });
-    }
-
-    // Create default lists
-    await admin.from("lists").insert([
-      { family_id: family.id, name: "Grocery", emoji: "🛒", color: "#22c55e", sort_order: 0 },
-      { family_id: family.id, name: "To-Do", emoji: "✏️", color: "#6366f1", sort_order: 1 },
-      { family_id: family.id, name: "Shopping", emoji: "🛍️", color: "#f59e0b", sort_order: 2 },
-    ]);
-
-    return NextResponse.json({ familyId: family.id });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Server error" },
-      { status: 500 }
-    );
+    const invite = body.invite ? requireId(body.invite, "invite") : null;
+    if (!invite && (typeof body.pin !== "string" || !/^\d{4}$/.test(body.pin))) throw new Error("PIN must be 4 digits");
+    input = {
+      p_name: requireText(body.parentName, "Your name", 100), p_color: requireColor(body.color),
+      p_avatar: requireText(body.avatarEmoji, "Avatar", 32), p_invite: invite,
+      p_family_name: invite ? "" : requireText(body.familyName, "Family name", 100), p_pin: invite ? "" : body.pin,
+    };
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid setup details" }, { status: 400 });
   }
+  // Membership, family and starter lists commit together. Retries return the same family.
+  // Identity is derived from the session, never the request body.
+  const { data, error } = await supabase.rpc("cc_onboard", input);
+  if (error || !data) return NextResponse.json({ error: "Could not complete setup. Check your invite and try again." }, { status: 503 });
+  return NextResponse.json({ familyId: data });
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import PinGate from "@/components/pin-gate";
 import { createStarReward, redeemReward } from "@/app/actions/chores";
 import type { FamilyMember, StarRedemption, StarReward } from "@/lib/types";
+import { useDialog } from "@/lib/use-dialog";
 
 interface RewardsViewProps {
   kid: FamilyMember;
@@ -21,40 +22,50 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
   const [pinOk, setPinOk] = useState(false);
   const [form, setForm] = useState({ name: "", emoji: "🎁", star_cost: 10 });
   const [saving, setSaving] = useState(false);
+  const [redeeming, setRedeeming] = useState(false);
+  // Keep the same intent ID after a lost response so retrying cannot spend twice.
+  const redemptionAttempt = useRef<{ rewardId: string; requestId: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const dialog = useDialog(adding && pinOk, saving ? undefined : () => { setAdding(false); setPinOk(false); });
 
   async function handleRedeem() {
-    if (!pendingReward) return;
+    if (!pendingReward || redeeming) return;
+    setRedeeming(true);
+    setError(null);
     try {
-      await redeemReward(pendingReward.id, kid.id, familyId, pendingReward.star_cost);
-      const r: StarRedemption = {
-        id: crypto.randomUUID(),
-        reward_id: pendingReward.id,
-        member_id: kid.id,
-        family_id: familyId,
-        redeemed_at: new Date().toISOString(),
-        stars_spent: pendingReward.star_cost,
-      };
+      if (redemptionAttempt.current?.rewardId !== pendingReward.id) {
+        redemptionAttempt.current = { rewardId: pendingReward.id, requestId: crypto.randomUUID() };
+      }
+      const r = await redeemReward(pendingReward.id, kid.id, familyId, redemptionAttempt.current.requestId);
       onRedeem(r);
+      redemptionAttempt.current = null;
+    } catch {
+      setError("Could not redeem this reward. Check the star balance and try again.");
     } finally {
       setPendingReward(null);
+      setRedeeming(false);
     }
   }
 
   async function saveReward() {
     if (!form.name.trim() || form.star_cost < 1 || saving) return;
     setSaving(true);
+    setError(null);
     try {
       await createStarReward(familyId, form);
       setAdding(false);
       setPinOk(false);
       setForm({ name: "", emoji: "🎁", star_cost: 10 });
+    } catch {
+      setError("Could not save this reward. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4" aria-busy={saving || redeeming}>
+      {error && <p role="alert" className="text-red-700 mb-3">{error}</p>}
       <div className="text-center py-4 mb-4">
         <div className="flex items-center justify-center gap-2">
           <Image src="/star-small.png" alt="star" width={40} height={40} />
@@ -87,7 +98,7 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
                 </div>
                 <button
                   onClick={() => unlocked && setPendingReward(reward)}
-                  disabled={!unlocked}
+                  disabled={!unlocked || redeeming}
                   className="px-3 py-1.5 rounded-full text-xs font-bold flex-shrink-0 touch-manipulation"
                   style={unlocked
                     ? { background: "#FDCB40", color: "#1C1A14" }
@@ -133,26 +144,30 @@ export default function RewardsView({ kid, rewards, starBalance, familyId, famil
 
       {adding && pinOk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "#1C1A14CC" }}>
-          <div className="w-full max-w-sm rounded-3xl p-6" style={{ background: "#FAF6E8" }}>
+          <div ref={dialog} role="dialog" aria-modal="true" aria-label="New reward" tabIndex={-1} className="w-full max-w-sm rounded-3xl p-6" style={{ background: "#FAF6E8" }}>
             <h3 className="text-lg font-bold mb-4">New reward</h3>
             <input
+              aria-label="Reward emoji"
               value={form.emoji}
               onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))}
               className="w-full mb-3 px-4 py-3 rounded-xl bg-white text-2xl"
             />
             <input
+              aria-label="Reward name"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="Movie ticket"
               className="w-full mb-3 px-4 py-3 rounded-xl bg-white"
             />
             <input
+              aria-label="Stars required"
               type="number"
               min={1}
               value={form.star_cost}
               onChange={(e) => setForm((f) => ({ ...f, star_cost: Number(e.target.value) }))}
               className="w-full mb-4 px-4 py-3 rounded-xl bg-white"
             />
+            {error && <p role="alert" className="text-red-700 mb-3">{error}</p>}
             <div className="flex gap-2">
               <button onClick={() => { setAdding(false); setPinOk(false); }} className="flex-1 py-3 rounded-xl bg-slate-100 font-semibold touch-manipulation">
                 Cancel

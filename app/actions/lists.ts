@@ -1,59 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireFamilyContext, requireFamilyRecord } from "@/lib/family-context";
+import { requireBoolean, requireColor, requireId, requireText } from "@/lib/validation";
 import type { List, ListItem } from "@/lib/types";
 
-const DEFAULT_LISTS = [
-  { name: "Grocery", emoji: "🛒", color: "#22c55e", sort_order: 0 },
-  { name: "To-Do", emoji: "✏️", color: "#6366f1", sort_order: 1 },
-  { name: "Shopping", emoji: "🛍️", color: "#f59e0b", sort_order: 2 },
-];
-
-async function getFamilyId(): Promise<string> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-  const { data: member, error } = await supabase
-    .from("family_members")
-    .select("family_id")
-    .eq("user_id", user.id)
-    .single();
-  if (error || !member) throw new Error("No family for user");
-  return member.family_id;
-}
-
-// One-time backfill for the pre-Phase-7 family.
-// Idempotent: re-checks emptiness on the server before inserting.
+// The database serializes this backfill with onboarding and other seed requests.
 export async function seedDefaultsIfEmpty(): Promise<void> {
-  const familyId = await getFamilyId();
-  const admin = createServiceClient();
-  const { count, error: countError } = await admin
-    .from("lists")
-    .select("id", { count: "exact", head: true })
-    .eq("family_id", familyId);
-  if (countError) throw new Error(countError.message);
-  if ((count ?? 0) > 0) return;
-  const rows = DEFAULT_LISTS.map((d) => ({ family_id: familyId, ...d }));
-  const { error } = await admin.from("lists").insert(rows);
+  const { supabase } = await requireFamilyContext();
+  const { error } = await supabase.rpc("cc_seed_lists");
   if (error) throw new Error(error.message);
   revalidatePath("/lists");
 }
 
 export async function addItem(listId: string, text: string): Promise<ListItem> {
-  const trimmed = text.trim();
-  if (!trimmed) throw new Error("text is required");
-  const familyId = await getFamilyId();
-  const supabase = await createClient();
-  const { data: maxRow } = await supabase
+  const trimmed = requireText(text, "Item text", 500);
+  const context = await requireFamilyContext();
+  const { supabase, familyId } = context;
+  await requireFamilyRecord(context, "lists", listId);
+  const { data: maxRow, error: maxError } = await supabase
     .from("list_items")
     .select("sort_order")
     .eq("list_id", listId)
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (maxError) throw new Error(maxError.message);
   const nextOrder = (maxRow?.sort_order ?? -1) + 1;
   const { data, error } = await supabase
     .from("list_items")
@@ -72,40 +44,39 @@ export async function addItem(listId: string, text: string): Promise<ListItem> {
 }
 
 export async function toggleItem(itemId: string, checked: boolean): Promise<void> {
-  const supabase = await createClient();
+  const { supabase, familyId } = await requireFamilyContext();
   const { error } = await supabase
     .from("list_items")
-    .update({ checked })
-    .eq("id", itemId);
+    .update({ checked: requireBoolean(checked) })
+    .eq("id", requireId(itemId)).eq("family_id", familyId);
   if (error) throw new Error(error.message);
   revalidatePath("/lists");
 }
 
 export async function editItem(itemId: string, text: string): Promise<void> {
-  const trimmed = text.trim();
-  if (!trimmed) throw new Error("text is required");
-  const supabase = await createClient();
+  const trimmed = requireText(text, "Item text", 500);
+  const { supabase, familyId } = await requireFamilyContext();
   const { error } = await supabase
     .from("list_items")
     .update({ text: trimmed })
-    .eq("id", itemId);
+    .eq("id", requireId(itemId)).eq("family_id", familyId);
   if (error) throw new Error(error.message);
   revalidatePath("/lists");
 }
 
 export async function deleteItem(itemId: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("list_items").delete().eq("id", itemId);
+  const { supabase, familyId } = await requireFamilyContext();
+  const { error } = await supabase.from("list_items").delete().eq("id", requireId(itemId)).eq("family_id", familyId);
   if (error) throw new Error(error.message);
   revalidatePath("/lists");
 }
 
 export async function clearCompleted(listId: string): Promise<void> {
-  const supabase = await createClient();
+  const { supabase, familyId } = await requireFamilyContext();
   const { error } = await supabase
     .from("list_items")
     .delete()
-    .eq("list_id", listId)
+    .eq("list_id", requireId(listId)).eq("family_id", familyId)
     .eq("checked", true);
   if (error) throw new Error(error.message);
   revalidatePath("/lists");
@@ -116,17 +87,18 @@ export async function createList(
   emoji: string,
   color: string
 ): Promise<List> {
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error("name is required");
-  const familyId = await getFamilyId();
-  const supabase = await createClient();
-  const { data: maxRow } = await supabase
+  const trimmed = requireText(name, "List name");
+  requireColor(color);
+  requireText(emoji, "Emoji", 32);
+  const { supabase, familyId } = await requireFamilyContext();
+  const { data: maxRow, error: maxError } = await supabase
     .from("lists")
     .select("sort_order")
     .eq("family_id", familyId)
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (maxError) throw new Error(maxError.message);
   const nextOrder = (maxRow?.sort_order ?? -1) + 1;
   const { data, error } = await supabase
     .from("lists")
@@ -146,13 +118,12 @@ export async function createList(
 }
 
 export async function renameList(listId: string, name: string): Promise<void> {
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error("name is required");
-  const supabase = await createClient();
+  const trimmed = requireText(name, "List name");
+  const { supabase, familyId } = await requireFamilyContext();
   const { error } = await supabase
     .from("lists")
     .update({ name: trimmed })
-    .eq("id", listId);
+    .eq("id", requireId(listId)).eq("family_id", familyId);
   if (error) throw new Error(error.message);
   revalidatePath("/lists");
   revalidatePath("/settings");
@@ -163,19 +134,19 @@ export async function updateListAppearance(
   emoji: string,
   color: string
 ): Promise<void> {
-  const supabase = await createClient();
+  const { supabase, familyId } = await requireFamilyContext();
   const { error } = await supabase
     .from("lists")
-    .update({ emoji, color })
-    .eq("id", listId);
+    .update({ emoji: requireText(emoji, "Emoji", 32), color: requireColor(color) })
+    .eq("id", requireId(listId)).eq("family_id", familyId);
   if (error) throw new Error(error.message);
   revalidatePath("/lists");
   revalidatePath("/settings");
 }
 
 export async function deleteList(listId: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("lists").delete().eq("id", listId);
+  const { supabase, familyId } = await requireFamilyContext();
+  const { error } = await supabase.from("lists").delete().eq("id", requireId(listId)).eq("family_id", familyId);
   if (error) throw new Error(error.message);
   revalidatePath("/lists");
   revalidatePath("/settings");

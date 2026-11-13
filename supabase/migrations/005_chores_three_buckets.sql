@@ -1,6 +1,10 @@
 -- Phase 5 restructure: expectations (unpaid, gating) vs extra work (paid, open pool).
 -- Spec: docs/superpowers/specs/2026-08-10-chores-three-buckets-design.md
 
+-- Keep the conversion atomic when running it through a SQL client/editor,
+-- so a failed index/constraint rolls back.
+begin;
+
 alter table public.chore_templates
   add column category text not null default 'expectation'
     check (category in ('expectation','extra_work')),
@@ -40,6 +44,8 @@ update public.chore_completions c set category = t.category
 create unique index idx_extra_work_once_per_day
   on public.chore_completions(template_id, date)
   where category = 'extra_work';
+
+commit;
 
 -- Post-apply verification — both of these must be true before anyone claims a job:
 --   select conname, pg_get_constraintdef(oid) from pg_constraint

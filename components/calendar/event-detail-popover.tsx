@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { type EventWithMember, formatTimeLong } from "@/lib/calendar";
+import { useFamilyRuntime } from "@/components/family-runtime";
+import { civilDate, zonedDate } from "@/lib/time-zone";
 import MemberAvatar from "@/components/family/member-avatar";
+import { useDialog } from "@/lib/use-dialog";
 
 const POPOVER_WIDTH = 320;
 const ANCHOR_GAP = 8;
@@ -25,7 +28,7 @@ function computePosition(rect: DOMRect): {
   }
   if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
   if (left + POPOVER_WIDTH > vw - VIEWPORT_MARGIN) {
-    left = vw - VIEWPORT_MARGIN - POPOVER_WIDTH;
+    left = Math.max(VIEWPORT_MARGIN, vw - VIEWPORT_MARGIN - POPOVER_WIDTH);
   }
 
   let top = rect.top;
@@ -46,7 +49,8 @@ export default function EventDetailPopover({
   anchorRect: DOMRect;
   onClose: () => void;
 }) {
-  const [pos] = useState(() => computePosition(anchorRect));
+  const [pos, setPos] = useState(() => computePosition(anchorRect));
+  const dialog = useDialog(true, onClose);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -55,15 +59,14 @@ export default function EventDetailPopover({
   }, []);
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+    const reposition = () => setPos(computePosition(anchorRect));
+    window.addEventListener("resize", reposition);
+    return () => window.removeEventListener("resize", reposition);
+  }, [anchorRect]);
 
-  const start = new Date(event.start_time);
-  const end = event.end_time ? new Date(event.end_time) : null;
+  const { timeZone } = useFamilyRuntime();
+  const start = event.all_day ? civilDate(event.start_time.slice(0, 10), timeZone) : zonedDate(event.start_time, timeZone);
+  const end = event.end_time ? zonedDate(event.end_time, timeZone) : null;
   const member = event.member;
   const accent = member?.color ?? "#4ecdc4";
 
@@ -75,7 +78,10 @@ export default function EventDetailPopover({
         aria-hidden="true"
       />
       <div
+        ref={dialog}
         role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
         aria-label={event.title}
         className={`fixed z-50 bg-cc-white border border-cc-line rounded-cc-md shadow-lg p-5 transition-all duration-150 ease-out ${
           mounted ? "opacity-100 scale-100" : "opacity-0 scale-95"
@@ -83,7 +89,9 @@ export default function EventDetailPopover({
         style={{
           top: pos.top,
           left: pos.left,
-          width: POPOVER_WIDTH,
+          width: `min(${POPOVER_WIDTH}px, calc(100vw - ${VIEWPORT_MARGIN * 2}px))`,
+          maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
+          overflowY: "auto",
           transformOrigin: pos.origin,
         }}
       >

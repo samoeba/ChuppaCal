@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
+import { useDialog } from "@/lib/use-dialog";
 
 interface Props {
   file: File;
@@ -18,6 +19,8 @@ export default function PhotoCropModal({ file, onCancel, onSave }: Props) {
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dialog = useDialog(true, saving ? undefined : onCancel);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -26,13 +29,14 @@ export default function PhotoCropModal({ file, onCancel, onSave }: Props) {
   }, [file]);
 
   async function handleSave() {
-    if (!area) return;
+    if (!area || saving) return;
+    setError(null);
     setSaving(true);
     try {
       const blob = await cropToBlob(src, area);
       onSave(blob);
     } catch (e) {
-      alert("Could not process image: " + (e as Error).message);
+      setError(e instanceof Error ? e.message : "Could not process image. Try another photo.");
     } finally {
       setSaving(false);
     }
@@ -40,7 +44,7 @@ export default function PhotoCropModal({ file, onCancel, onSave }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md flex flex-col overflow-hidden">
+      <div ref={dialog} role="dialog" aria-modal="true" aria-label="Crop family photo" tabIndex={-1} className="bg-white rounded-2xl w-full max-w-md flex flex-col overflow-hidden">
         <div className="relative w-full h-80 bg-black">
           {src && (
             <Cropper
@@ -60,6 +64,7 @@ export default function PhotoCropModal({ file, onCancel, onSave }: Props) {
           <p className="text-sm text-slate-400 mb-2">Zoom</p>
           <input
             type="range"
+            aria-label="Photo zoom"
             min={1}
             max={4}
             step={0.05}
@@ -69,6 +74,7 @@ export default function PhotoCropModal({ file, onCancel, onSave }: Props) {
             data-no-keyboard
           />
         </div>
+        {error && <p role="alert" className="px-4 pb-3 text-red-700">{error}</p>}
         <div className="flex gap-2 p-4 pt-0">
           <button
             onClick={onCancel}

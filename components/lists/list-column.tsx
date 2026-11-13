@@ -22,7 +22,7 @@ function compareItems(a: ListItem, b: ListItem) {
 
 export default function ListColumn({ list, items, familyId, onItemsChange }: Props) {
   const [error, setError] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const sorted = [...items].sort(compareItems);
   const uncheckedCount = items.filter((i) => !i.checked).length;
   const checkedCount = items.length - uncheckedCount;
@@ -30,11 +30,14 @@ export default function ListColumn({ list, items, familyId, onItemsChange }: Pro
   async function handleClearCompleted() {
     if (checkedCount === 0) return;
     if (!confirm(`Clear ${checkedCount} completed item${checkedCount === 1 ? "" : "s"} from "${list.name}"?`)) return;
+    setError(null);
+    const removed = items.filter((item) => item.checked);
     onItemsChange((prev) => prev.filter((i) => !(i.list_id === list.id && i.checked)));
     startTransition(async () => {
       try {
         await clearCompleted(list.id);
       } catch (e) {
+        onItemsChange((prev) => [...prev, ...removed.filter((item) => !prev.some((current) => current.id === item.id))]);
         setError(e instanceof Error ? e.message : "Failed to clear");
       }
     });
@@ -42,6 +45,7 @@ export default function ListColumn({ list, items, familyId, onItemsChange }: Pro
 
   return (
     <section
+      aria-busy={pending}
       className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 w-80 max-w-[85vw] flex-shrink-0"
       style={{ borderTop: `4px solid ${list.color}` }}
     >
@@ -71,11 +75,12 @@ export default function ListColumn({ list, items, familyId, onItemsChange }: Pro
         )}
       </div>
 
-      {error && <p className="text-red-500 text-xs px-4 pb-2">{error}</p>}
+      {error && <p role="alert" className="text-red-500 text-xs px-4 pb-2">{error}</p>}
 
       {checkedCount > 0 && (
         <button
           onClick={handleClearCompleted}
+          disabled={pending}
           className="text-xs text-slate-400 hover:text-rose-500 px-4 py-2 text-left touch-manipulation"
         >
           Clear completed ({checkedCount})

@@ -1,8 +1,8 @@
 # Pi Kiosk Auto-Launch — Runbook
 
 How the wall-mounted Raspberry Pi boots straight into ChuppaCal full-screen. This is the
-"Pi kiosk auto-launch" slice of Phase 8. **Screensaver and Sleep Mode are intentionally
-deferred** (see "Deferred" at the bottom).
+"Pi kiosk auto-launch" slice of Phase 8. Optional in-app scheduled sleep and idle
+clock are implemented locally but are **not deployed or device-tested** yet (see below).
 
 ## What it does
 
@@ -15,8 +15,8 @@ On every boot the Pi:
 4. The Chromium profile persists the Supabase/Google session, so reboots go straight to
    the calendar with **no re-login**.
 
-Screen blanking is disabled, so the display stays on indefinitely (sleep-on-schedule is
-deferred).
+OS screen blanking is disabled. The new app has an optional full-screen sleep overlay,
+but it defaults off and does not power down the monitor/backlight.
 
 ## Environment (as built)
 
@@ -65,7 +65,7 @@ Open a terminal on the Pi (taskbar icon or **Ctrl+Alt+T**) and:
    **Ctrl+X** to exit.
 3. **Verify, then reboot:** `cat ~/.config/labwc/autostart` to eyeball it, then `sudo reboot`.
 4. **First boot only:** if it lands on the login page, sign in with Google as the family
-   owner (`samcaseydesign@gmail.com`) — click through the yellow "unverified app" warning
+   owner’s existing account — verify the expected OAuth application before continuing through any consent warning
    via Advanced. The session then persists across reboots.
 
 ## Maintenance / recovery
@@ -100,10 +100,20 @@ These are nice-to-haves we deliberately left out of the first working version:
   Omitted because Chromium auto-detected Wayland correctly; add only if fullscreen/touch
   misbehaves after an OS update.
 
-## Deferred (rest of Phase 8)
+## Optional display modes in the pending app release
 
-- **Sleep Mode** — dim/blank on a schedule per `families.settings.sleep_start`/`sleep_end`.
-  Note we *disabled* OS screen blanking here; sleep mode would be the app's own scheduled
-  overlay (per the design spec, §5.7).
-- **Photo Screensaver** — cycle family photos after `screensaver_timeout_minutes` idle
-  (design spec §5.6).
+After the schema/app release in `docs/release-2026-09-27.md`, use Settings → Display
+to enable either mode **on the kiosk**. These preferences are family-wide, but the overlay
+appears only on devices with kiosk mode enabled (`?kiosk=1`). Both start disabled.
+
+- **Scheduled sleep:** an in-app dark overlay follows the family's IANA timezone and
+  `sleep_start`/`sleep_end`. A tap/key wakes it for 10 minutes. It does not send a monitor
+  power command; the backlight may remain on. Test overnight energy and burn-in behavior
+  on the physical Acer before relying on it.
+- **Idle clock:** after the configured idle minutes, shows a large clock and cycles the
+  family member profile photos already stored in the app. A tap/key returns to the app.
+  This is **not** a separate family photo gallery. Existing photos are currently public
+  URLs (approval item 3 remains on hold), so do not add sensitive images.
+
+Test keyboard/touch wake, editing suppression, kiosk restart, midnight and power loss
+on the actual Pi. Desktop/jsdom checks are not hardware acceptance.

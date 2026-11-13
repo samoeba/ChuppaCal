@@ -38,6 +38,19 @@ export default function MealGrid({ meals, mealSlots, weekDays, todayStr, onCellT
 
   return (
     <div className="flex-1 overflow-auto px-2 pb-4">
+      <div className="md:hidden space-y-4">
+        {weekDays.map((date, index) => <section key={date} className={`rounded-2xl bg-white p-4 border ${date === todayStr ? "border-sky" : "border-cc-line"}`}>
+          <h2 className="font-bold mb-2">{DAY_LABELS[index]} {Number(date.slice(-2))}{date === todayStr ? " · Today" : ""}</h2>
+          {enabledSlots.map((slot) => {
+            const meal = mealIndex.get(`${date}|${slot}`);
+            return <button key={slot} onClick={() => onCellTap(date, slot, meal)} className="flex w-full min-h-14 items-center justify-between gap-3 border-t border-cc-line py-3 text-left">
+              <span className="text-sm text-cc-ink-dim">{SLOT_LABELS[slot]}</span>
+              <span className="font-semibold">{meal ? `${meal.emoji ?? ""} ${meal.name}` : "+ Plan meal"}</span>
+            </button>;
+          })}
+        </section>)}
+      </div>
+      <div className="hidden md:block min-w-[760px]">
       <div
         className="grid gap-1 mb-1"
         style={{ gridTemplateColumns: `24px repeat(7, 1fr)` }}
@@ -85,6 +98,7 @@ export default function MealGrid({ meals, mealSlots, weekDays, todayStr, onCellT
           })}
         </div>
       ))}
+      </div>
     </div>
   );
 }

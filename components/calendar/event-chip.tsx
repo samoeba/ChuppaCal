@@ -1,5 +1,9 @@
+"use client";
+
 import type { EventWithMember } from "@/lib/calendar";
 import { formatTimeLong } from "@/lib/calendar";
+import { useFamilyRuntime } from "@/components/family-runtime";
+import { zonedDate } from "@/lib/time-zone";
 
 const FALLBACK_COLOR = "#4ecdc4";
 
@@ -10,9 +14,10 @@ export default function EventChip({
   event: EventWithMember;
   showTime?: boolean;
 }) {
+  const { timeZone } = useFamilyRuntime();
   const color = event.member?.color ?? FALLBACK_COLOR;
-  const start = new Date(event.start_time);
-  const end = event.end_time ? new Date(event.end_time) : null;
+  const start = zonedDate(event.start_time, timeZone);
+  const end = event.end_time ? zonedDate(event.end_time, timeZone) : null;
   const timeLabel = event.all_day
     ? "All day"
     : end

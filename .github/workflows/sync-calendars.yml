@@ -14,6 +14,9 @@ concurrency:
   group: sync-calendars
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -28,6 +31,10 @@ jobs:
             echo "::error::Missing CALENDAR_SYNC_URL or CRON_SECRET secret"
             exit 1
           fi
+          if [ "$SYNC_URL" != 'https://chuppa-cal.vercel.app/api/cron/sync-calendars' ]; then
+            echo "::error::CALENDAR_SYNC_URL must point to the production calendar sync endpoint"
+            exit 1
+          fi
 
           response=$(curl -sS --max-time 90 -w "\n%{http_code}" \
             -H "Authorization: Bearer $CRON_SECRET" \
@@ -36,9 +43,15 @@ jobs:
           body=$(printf '%s' "$response" | sed '$d')
 
           echo "Status: $status"
-          echo "$body"
 
           if [ "$status" != "200" ]; then
             echo "::error::Sync endpoint returned $status"
             exit 1
           fi
+
+          if ! printf '%s' "$body" | jq -e '.ok == true and (.results | type == "array") and all(.results[]; has("error") | not)' > /dev/null; then
+            echo "::error::One or more calendar connections failed to sync"
+            exit 1
+          fi
+
+          printf '%s' "$body" | jq '{connections_synced: ([.results[] | select(.events_upserted | type == "number")] | length), events_upserted: ([.results[].events_upserted | numbers] | add // 0), skipped: ([.results[] | select(.skipped == true)] | length), deferred: (.deferred // 0)}'

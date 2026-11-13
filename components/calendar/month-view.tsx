@@ -4,7 +4,7 @@ import {
   addDays,
   endOfMonthGrid,
   isToday,
-  sameDay,
+  groupEventsByDay,
   startOfMonthGrid,
   toDateParam,
 } from "@/lib/calendar";
@@ -25,14 +25,7 @@ export default function MonthView({
   const dayCount = Math.round((gridEnd.getTime() - gridStart.getTime()) / (24 * 3600 * 1000));
   const currentMonth = date.getMonth();
 
-  // Group events per ISO date string for O(1) lookup.
-  const byDate = new Map<string, EventWithMember[]>();
-  for (const ev of events) {
-    const key = toDateParam(new Date(ev.start_time));
-    const bucket = byDate.get(key) ?? [];
-    bucket.push(ev);
-    byDate.set(key, bucket);
-  }
+  const buckets = groupEventsByDay(events, gridStart, dayCount);
 
   const days = Array.from({ length: dayCount }, (_, i) => addDays(gridStart, i));
 
@@ -49,7 +42,7 @@ export default function MonthView({
         {days.map((d, i) => {
           const inMonth = d.getMonth() === currentMonth;
           const today = isToday(d);
-          const dayEvents = byDate.get(toDateParam(d)) ?? [];
+          const dayEvents = buckets[i];
           const dots = dayEvents.slice(0, MAX_DOTS_PER_DAY);
           const extra = dayEvents.length - dots.length;
           return (
@@ -57,6 +50,7 @@ export default function MonthView({
               key={i}
               href={`/calendar?view=day&date=${toDateParam(d)}`}
               scroll={false}
+              aria-label={`${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}: ${dayEvents.length} events${dayEvents.length ? `, ${dayEvents.map((event) => event.title).join(", ")}` : ""}`}
               className={`min-h-[88px] border-r border-b border-cc-line p-2 flex flex-col gap-1 active:bg-cc-beige ${
                 inMonth ? "" : "bg-cc-beige/40 opacity-60"
               } ${(i + 1) % 7 === 0 ? "border-r-0" : ""}`}

@@ -1,7 +1,7 @@
 // components/lists/list-item-row.tsx
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { ListItem } from "@/lib/types";
 import { toggleItem, editItem, deleteItem } from "@/app/actions/lists";
 
@@ -12,16 +12,15 @@ interface Props {
   onError: (msg: string | null) => void;
 }
 
-const LONG_PRESS_MS = 500;
-
 export default function ListItemRow({ item, accentColor, onItemsChange, onError }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item.text);
-  const [, startTransition] = useTransition();
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressFired = useRef(false);
+  const [pending, startTransition] = useTransition();
+  const unavailable = pending || item.id.startsWith("temp-");
 
   function handleToggle() {
+    if (unavailable) return;
+    onError(null);
     const nextChecked = !item.checked;
     onItemsChange((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, checked: nextChecked } : i))
@@ -71,39 +70,28 @@ export default function ListItemRow({ item, accentColor, onItemsChange, onError 
     });
   }
 
-  function pressStart() {
-    longPressFired.current = false;
-    longPressTimer.current = setTimeout(() => {
-      longPressFired.current = true;
-      handleLongPress();
-    }, LONG_PRESS_MS);
-  }
-
-  function pressEnd() {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }
-
-  function handleLongPress() {
+  function handleDelete() {
     if (!confirm(`Delete "${item.text}"?`)) return;
+    onError(null);
     onItemsChange((prev) => prev.filter((i) => i.id !== item.id));
     startTransition(async () => {
       try {
         await deleteItem(item.id);
       } catch (e) {
+        onItemsChange((prev) => prev.some((current) => current.id === item.id) ? prev : [...prev, item]);
         onError(e instanceof Error ? e.message : "Failed to delete");
       }
     });
   }
 
   return (
-    <li className="flex items-center gap-3 px-2 py-2 rounded-xl transition-all">
+    <li aria-busy={pending} className="flex items-center gap-2 px-2 py-2 rounded-xl transition-all">
       <button
         onClick={handleToggle}
-        aria-label={item.checked ? "Uncheck" : "Check"}
-        className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 touch-manipulation transition-colors ${
+        disabled={unavailable}
+        aria-label={`${item.checked ? "Uncheck" : "Check"} ${item.text}`}
+        aria-pressed={item.checked}
+        className={`w-11 h-11 rounded-md border-2 flex items-center justify-center flex-shrink-0 touch-manipulation transition-colors ${
           item.checked ? "border-transparent text-white" : "border-slate-300 bg-white"
         }`}
         style={item.checked ? { backgroundColor: accentColor } : undefined}
@@ -114,6 +102,7 @@ export default function ListItemRow({ item, accentColor, onItemsChange, onError 
       {editing ? (
         <input
           type="text"
+          aria-label="Item text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={saveEdit}
@@ -125,23 +114,19 @@ export default function ListItemRow({ item, accentColor, onItemsChange, onError 
           className="flex-1 bg-transparent border-b border-slate-300 focus:border-slate-600 focus:outline-none py-1"
         />
       ) : (
-        <span
-          onClick={() => {
-            if (!longPressFired.current) startEdit();
-          }}
-          onMouseDown={pressStart}
-          onMouseUp={pressEnd}
-          onMouseLeave={pressEnd}
-          onTouchStart={pressStart}
-          onTouchEnd={pressEnd}
-          onTouchCancel={pressEnd}
-          className={`flex-1 select-none cursor-text ${
+        <button
+          type="button"
+          onClick={startEdit}
+          disabled={unavailable || item.checked}
+          aria-label={`Edit ${item.text}`}
+          className={`flex-1 min-w-0 min-h-11 text-left break-words cursor-text ${
             item.checked ? "line-through text-slate-400" : "text-slate-800"
           }`}
         >
           {item.text}
-        </span>
+        </button>
       )}
+      <button type="button" onClick={handleDelete} disabled={unavailable} aria-label={`Delete ${item.text}`} className="w-11 h-11 shrink-0 rounded-lg text-slate-400 hover:text-rose-600 text-xl">×</button>
     </li>
   );
 }

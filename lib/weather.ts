@@ -23,7 +23,7 @@ export async function getWeather(location: string): Promise<Weather | null> {
   )}&units=imperial&appid=${apiKey}`;
 
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(5_000) });
     if (!res.ok) return null;
     const json = await res.json();
     const weather: Weather = {

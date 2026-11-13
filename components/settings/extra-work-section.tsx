@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDialog } from "@/lib/use-dialog";
 import { createChoreTemplate, updateChoreTemplate, deleteChoreTemplate } from "@/app/actions/chores";
 import type { ChoreTemplate } from "@/lib/types";
 
@@ -19,6 +20,7 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
   const [form, setForm] = useState<Form>(DEFAULT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialog = useDialog(showModal, saving ? undefined : () => setShowModal(false));
 
   function openAdd() {
     setEditing(null);
@@ -104,11 +106,13 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "#1C1A14CC" }}>
-          <div className="w-full max-w-md rounded-3xl p-6" style={{ background: "#FAF6E8" }}>
+          <div ref={dialog} role="dialog" aria-modal="true" aria-label={editing ? "Edit job" : "New job"} aria-busy={saving} tabIndex={-1} className="w-full max-w-md rounded-3xl p-6 max-h-[90dvh] overflow-y-auto" style={{ background: "#FAF6E8" }}>
             <h3 className="text-lg font-bold mb-4">{editing ? "Edit job" : "New job"}</h3>
 
             <label className="text-xs font-semibold text-slate-500">Name</label>
             <input
+              aria-label="Job name"
+              maxLength={200}
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               className="w-full mb-3 px-4 py-3 rounded-xl bg-white"
@@ -117,6 +121,8 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
 
             <label className="text-xs font-semibold text-slate-500">Emoji</label>
             <input
+              aria-label="Job emoji"
+              maxLength={32}
               value={form.emoji}
               onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))}
               className="w-full mb-3 px-4 py-3 rounded-xl bg-white text-2xl"
@@ -127,6 +133,8 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
               {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => (
                 <button
                   key={v}
+                  aria-label={`${v} stars`}
+                  aria-pressed={form.star_value === v}
                   onClick={() => setForm((f) => ({ ...f, star_value: v }))}
                   className={`w-10 py-2 rounded-xl text-sm font-semibold touch-manipulation ${
                     form.star_value === v ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-600"
@@ -138,6 +146,7 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
             </div>
 
             <button
+              aria-pressed={form.is_special}
               onClick={() => setForm((f) => ({ ...f, is_special: !f.is_special }))}
               className={`w-full mb-4 py-3 rounded-xl font-semibold touch-manipulation ${
                 form.is_special ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-500"
@@ -153,7 +162,7 @@ export default function ExtraWorkSection({ jobs, familyId, onChanged }: Props) {
             )}
 
             <div className="flex gap-2">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-xl bg-slate-100 font-semibold touch-manipulation">
+              <button disabled={saving} onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-xl bg-slate-100 font-semibold touch-manipulation">
                 Cancel
               </button>
               <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-semibold touch-manipulation disabled:opacity-50">

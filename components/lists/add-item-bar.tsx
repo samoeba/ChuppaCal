@@ -15,12 +15,13 @@ interface Props {
 
 export default function AddItemBar({ listId, familyId, accentColor, onItemsChange, onError }: Props) {
   const [draft, setDraft] = useState("");
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
   function submit() {
     const trimmed = draft.trim();
-    if (!trimmed) return;
+    if (!trimmed || pending) return;
+    onError(null);
 
     const tempId = `temp-${crypto.randomUUID()}`;
     const optimistic: ListItem = {
@@ -39,7 +40,7 @@ export default function AddItemBar({ listId, familyId, accentColor, onItemsChang
     startTransition(async () => {
       try {
         const saved = await addItem(listId, trimmed);
-        onItemsChange((prev) => prev.map((i) => (i.id === tempId ? saved : i)));
+        onItemsChange((prev) => [...prev.filter((i) => i.id !== tempId && i.id !== saved.id), saved]);
       } catch (e) {
         onItemsChange((prev) => prev.filter((i) => i.id !== tempId));
         onError(e instanceof Error ? e.message : "Failed to add");
@@ -48,10 +49,12 @@ export default function AddItemBar({ listId, familyId, accentColor, onItemsChang
   }
 
   return (
-    <div className="border-t border-slate-100 p-3 flex gap-2">
+    <div aria-busy={pending} className="border-t border-slate-100 p-3 flex gap-2">
       <input
         ref={inputRef}
         type="text"
+        aria-label="New list item"
+        maxLength={500}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && submit()}
@@ -61,7 +64,7 @@ export default function AddItemBar({ listId, familyId, accentColor, onItemsChang
       />
       <button
         onClick={submit}
-        disabled={!draft.trim()}
+        disabled={pending || !draft.trim()}
         className="text-white px-3 py-2 rounded-xl text-sm font-semibold touch-manipulation disabled:opacity-40"
         style={{ backgroundColor: accentColor }}
       >

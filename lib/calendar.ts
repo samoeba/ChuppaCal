@@ -1,4 +1,6 @@
 import type { CalendarEvent, FamilyMember } from "@/lib/types";
+import { isDateString } from "@/lib/validation";
+import { civilDate, DEFAULT_TIME_ZONE, timeZoneOf, zonedDate } from "@/lib/time-zone";
 
 export type CalendarView = "day" | "week" | "month";
 
@@ -9,19 +11,12 @@ export function parseView(raw: string | undefined): CalendarView {
   return raw === "day" || raw === "month" ? raw : "week";
 }
 
-// Anchor parsed YYYY-MM-DD at noon UTC so the date "name" is stable in any
-// timezone between UTC-12 and UTC+11. Without this, server (UTC) and client
-// (e.g. PDT) round-trip the URL ?date param asymmetrically and the week-view
-// arrows shift by 4 days forward / 6 days backward instead of 5/5.
-export function parseDate(raw: string | undefined): Date {
-  if (raw) {
-    const d = new Date(raw + "T12:00:00Z");
-    if (!Number.isNaN(d.getTime())) return d;
-  }
-  return new Date();
+export function parseDate(raw: string | undefined, timeZone = DEFAULT_TIME_ZONE): Date {
+  return isDateString(raw) ? civilDate(raw, timeZone) : zonedDate(Date.now(), timeZone);
 }
 
-export function toDateParam(d: Date): string {
+export function toDateParam(value: Date, timeZone = timeZoneOf(value)): string {
+  const d = zonedDate(value, timeZone);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
@@ -29,13 +24,13 @@ export function toDateParam(d: Date): string {
 }
 
 export function startOfDay(d: Date): Date {
-  const r = new Date(d);
+  const r = zonedDate(d);
   r.setHours(0, 0, 0, 0);
   return r;
 }
 
 export function addDays(d: Date, n: number): Date {
-  const r = new Date(d);
+  const r = zonedDate(d);
   r.setDate(r.getDate() + n);
   return r;
 }
@@ -52,12 +47,14 @@ export function endOfWeek(d: Date): Date {
 }
 
 export function startOfMonthGrid(d: Date): Date {
-  const first = new Date(d.getFullYear(), d.getMonth(), 1);
+  const first = zonedDate(d);
+  first.setDate(1);
   return startOfWeek(first);
 }
 
 export function endOfMonthGrid(d: Date): Date {
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const last = zonedDate(d);
+  last.setMonth(last.getMonth() + 1, 0);
   return addDays(endOfWeek(last), 0);
 }
 
@@ -69,18 +66,15 @@ export function rangeForView(view: CalendarView, d: Date): { start: Date; end: D
 }
 
 export function sameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+  return toDateParam(a) === toDateParam(b, timeZoneOf(a));
 }
 
 export function isToday(d: Date): boolean {
   return sameDay(d, new Date());
 }
 
-export function formatTime(d: Date): string {
+export function formatTime(value: Date): string {
+  const d = zonedDate(value);
   const h = d.getHours();
   const m = d.getMinutes();
   const suffix = h >= 12 ? "p" : "a";
@@ -88,7 +82,8 @@ export function formatTime(d: Date): string {
   return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2, "0")}${suffix}`;
 }
 
-export function formatTimeLong(d: Date): string {
+export function formatTimeLong(value: Date): string {
+  const d = zonedDate(value);
   const h = d.getHours();
   const m = d.getMinutes();
   const suffix = h >= 12 ? "PM" : "AM";
@@ -105,11 +100,9 @@ export function groupEventsByDay(
 ): EventWithMember[][] {
   const buckets: EventWithMember[][] = Array.from({ length: dayCount }, () => []);
   for (const ev of events) {
-    const evStart = new Date(ev.start_time);
-    const diff = Math.floor(
-      (startOfDay(evStart).getTime() - start.getTime()) / (24 * 60 * 60 * 1000)
-    );
-    if (diff >= 0 && diff < dayCount) buckets[diff].push(ev);
+    for (let i = 0; i < dayCount; i++) {
+      if (eventOccursOnDay(ev, addDays(start, i))) buckets[i].push(ev);
+    }
   }
   for (const bucket of buckets) {
     bucket.sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time));
@@ -117,8 +110,21 @@ export function groupEventsByDay(
   return buckets;
 }
 
+export function eventOccursOnDay(event: EventWithMember, day: Date): boolean {
+  if (event.all_day) {
+    const date = toDateParam(day);
+    // Google all-day end dates are exclusive; never convert civil dates to local time.
+    return event.start_time.slice(0, 10) <= date && date < event.end_time.slice(0, 10);
+  }
+  const start = +new Date(event.start_time);
+  const end = +new Date(event.end_time);
+  const dayStart = +startOfDay(day);
+  const dayEnd = +addDays(startOfDay(day), 1);
+  return start < dayEnd && (end > dayStart || (start === end && start >= dayStart));
+}
+
 export function monthLabel(d: Date): string {
-  return d.toLocaleString("en-US", { month: "long", year: "numeric" });
+  return zonedDate(d).toLocaleString("en-US", { month: "long", year: "numeric" });
 }
 
 export function weekRangeLabel(d: Date): string {
@@ -133,14 +139,19 @@ export function weekRangeLabel(d: Date): string {
 }
 
 export function dayLabel(d: Date): string {
-  return d.toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  return zonedDate(d).toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
 export function shiftForView(view: CalendarView, d: Date, delta: number): Date {
   if (view === "day") return addDays(d, delta);
   if (view === "month") {
-    const r = new Date(d);
+    const r = zonedDate(d);
+    const day = r.getDate();
+    r.setDate(1);
     r.setMonth(r.getMonth() + delta);
+    const last = zonedDate(r);
+    last.setMonth(last.getMonth() + 1, 0);
+    r.setDate(Math.min(day, last.getDate()));
     return r;
   }
   return addDays(d, delta * WEEK_VIEW_DAYS);

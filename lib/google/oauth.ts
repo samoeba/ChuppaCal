@@ -66,17 +66,18 @@ export async function exchangeCodeForTokens(params: {
 
   const res = await fetch(TOKEN_URL, {
     method: "POST",
+    signal: AbortSignal.timeout(15_000),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
   if (!res.ok) {
-    throw new Error(`Google token exchange failed: ${res.status} ${await res.text()}`);
+    throw new Error(`Google token exchange failed: ${res.status}`);
   }
   return res.json();
 }
 
 export async function refreshAccessToken(
-  refreshToken: string
+  refreshToken: string, signal?: AbortSignal
 ): Promise<GoogleTokenResponse> {
   const clientId = requireEnv("GOOGLE_CLIENT_ID");
   const clientSecret = requireEnv("GOOGLE_CLIENT_SECRET");
@@ -90,17 +91,19 @@ export async function refreshAccessToken(
 
   const res = await fetch(TOKEN_URL, {
     method: "POST",
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
   if (!res.ok) {
-    throw new Error(`Google token refresh failed: ${res.status} ${await res.text()}`);
+    throw new Error(`Google token refresh failed: ${res.status}`);
   }
   return res.json();
 }
 
 export async function getUserInfo(accessToken: string): Promise<{ email?: string }> {
   const res = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    signal: AbortSignal.timeout(15_000),
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) return {};
@@ -108,14 +111,14 @@ export async function getUserInfo(accessToken: string): Promise<{ email?: string
 }
 
 export async function getValidAccessToken(
-  creds: StoredGoogleCredentials
+  creds: StoredGoogleCredentials, signal?: AbortSignal
 ): Promise<{ token: string; updated: StoredGoogleCredentials | null }> {
   const now = Date.now();
   // Refresh ~1 minute before actual expiry.
   if (creds.expires_at - 60_000 > now) {
     return { token: creds.access_token, updated: null };
   }
-  const refreshed = await refreshAccessToken(creds.refresh_token);
+  const refreshed = await refreshAccessToken(creds.refresh_token, signal);
   const updated: StoredGoogleCredentials = {
     ...creds,
     access_token: refreshed.access_token,

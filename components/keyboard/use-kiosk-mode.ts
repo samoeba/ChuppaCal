@@ -1,20 +1,22 @@
 // components/keyboard/use-kiosk-mode.ts
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "chuppacal_kiosk";
+let fallbackFlag = false;
 
 function readFlag(): boolean {
   if (typeof window === "undefined") return false;
   try {
     return window.localStorage.getItem(STORAGE_KEY) === "1";
   } catch {
-    return false;
+    return fallbackFlag;
   }
 }
 
 function writeFlag(on: boolean): void {
+  fallbackFlag = on;
   try {
     if (on) window.localStorage.setItem(STORAGE_KEY, "1");
     else window.localStorage.removeItem(STORAGE_KEY);
@@ -23,24 +25,14 @@ function writeFlag(on: boolean): void {
   }
 }
 
-/**
- * Computes the initial kiosk-mode state at mount, processing any
- * `?kiosk=1` / `?kiosk=0` URL param (which also writes to localStorage).
- * Runs once via `useState` lazy initializer; returns false during SSR.
- */
-function getInitialActive(): boolean {
-  if (typeof window === "undefined") return false;
-  const url = new URL(window.location.href);
-  const param = url.searchParams.get("kiosk");
-  if (param === "1") {
-    writeFlag(true);
-    return true;
-  }
-  if (param === "0") {
-    writeFlag(false);
-    return false;
-  }
-  return readFlag();
+// Storage subscriptions keep render pure and the server snapshot hydration-safe.
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("chuppacal-kiosk-changed", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("chuppacal-kiosk-changed", callback);
+  };
 }
 
 /**
@@ -56,20 +48,10 @@ function getInitialActive(): boolean {
  * the settings switch — both fire setState only from event handlers.
  */
 export function useKioskMode(): boolean {
-  const [active, setActive] = useState<boolean>(getInitialActive);
-
+  const active = useSyncExternalStore(subscribe, readFlag, () => false);
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) setActive(readFlag());
-    };
-    const onCustom = () => setActive(readFlag());
-
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("chuppacal-kiosk-changed", onCustom);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("chuppacal-kiosk-changed", onCustom);
-    };
+    const param = new URL(window.location.href).searchParams.get("kiosk");
+    if (param === "1" || param === "0") setKioskMode(param === "1");
   }, []);
 
   return active;

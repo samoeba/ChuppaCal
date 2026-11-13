@@ -107,7 +107,7 @@ textarea,
 }
 
 /* Prevent text selection on non-input elements */
-*:not(input):not(textarea):not([contenteditable="true"]) {
+html[data-kiosk="true"] *:not(input):not(textarea):not([contenteditable="true"]) {
   -webkit-user-select: none;
   user-select: none;
 }
@@ -142,6 +142,20 @@ textarea,
 .text-body       { font-family: var(--font-body); font-size: 1rem;    line-height: 1.35; font-weight: 500; letter-spacing: -0.01em; }
 .text-caption    { font-family: var(--font-body); font-size: 0.875rem; line-height: 1.3; font-weight: 500; color: var(--color-cc-ink-dim); }
 .text-label      { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+
+:focus-visible {
+  outline: 3px solid var(--color-sky);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* =========================================================
  * Keyframes

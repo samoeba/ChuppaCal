@@ -21,15 +21,16 @@ export type GoogleEvent = {
 
 async function googleFetch<T>(
   url: string,
-  creds: StoredGoogleCredentials
+  creds: StoredGoogleCredentials, signal?: AbortSignal
 ): Promise<{ data: T; updatedCreds: StoredGoogleCredentials | null }> {
-  const { token, updated } = await getValidAccessToken(creds);
+  const { token, updated } = await getValidAccessToken(creds, signal);
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
   });
   if (!res.ok) {
-    throw new Error(`Google API error ${res.status}: ${await res.text()}`);
+    throw new Error(`Google API error ${res.status}`);
   }
   return { data: (await res.json()) as T, updatedCreds: updated };
 }
@@ -37,12 +38,29 @@ async function googleFetch<T>(
 export async function listCalendars(
   creds: StoredGoogleCredentials
 ): Promise<{ items: GoogleCalendarListItem[]; updatedCreds: StoredGoogleCredentials | null }> {
-  type Response = { items?: GoogleCalendarListItem[] };
-  const { data, updatedCreds } = await googleFetch<Response>(
-    "https://www.googleapis.com/calendar/v3/users/me/calendarList",
-    creds
+  const { items, updatedCreds } = await googlePages<GoogleCalendarListItem>(
+    "https://www.googleapis.com/calendar/v3/users/me/calendarList", creds,
   );
-  return { items: data.items ?? [], updatedCreds };
+  return { items, updatedCreds };
+}
+
+async function googlePages<T>(url: string, creds: StoredGoogleCredentials, signal = AbortSignal.timeout(40_000)) {
+  const items: T[] = [];
+  let updatedCreds: StoredGoogleCredentials | null = null;
+  const next = new URL(url);
+  const seen = new Set<string>();
+  while (true) {
+    signal.throwIfAborted();
+    if (seen.size >= 100 || items.length > 100000) throw new Error("Calendar exceeds sync size limit");
+    const result: { data: { items?: T[]; nextPageToken?: string }; updatedCreds: StoredGoogleCredentials | null } = await googleFetch(next.toString(), updatedCreds ?? creds, signal);
+    updatedCreds = result.updatedCreds ?? updatedCreds;
+    items.push(...(result.data.items ?? []));
+    const token = result.data.nextPageToken;
+    if (!token) return { items, updatedCreds };
+    if (seen.has(token)) throw new Error("Google returned a repeated page token");
+    seen.add(token);
+    next.searchParams.set("pageToken", token);
+  }
 }
 
 export async function listEvents(params: {
@@ -51,6 +69,7 @@ export async function listEvents(params: {
   timeMin: Date;
   timeMax: Date;
   updatedMin?: Date;
+  signal?: AbortSignal;
 }): Promise<{
   events: GoogleEvent[];
   updatedCreds: StoredGoogleCredentials | null;
@@ -61,6 +80,7 @@ export async function listEvents(params: {
     singleEvents: "true",
     orderBy: "startTime",
     maxResults: "2500",
+    showDeleted: "true",
   });
   if (params.updatedMin) qs.set("updatedMin", params.updatedMin.toISOString());
 
@@ -68,9 +88,8 @@ export async function listEvents(params: {
     params.calendarId
   )}/events?${qs.toString()}`;
 
-  type Response = { items?: GoogleEvent[] };
-  const { data, updatedCreds } = await googleFetch<Response>(url, params.creds);
-  return { events: data.items ?? [], updatedCreds };
+  const { items, updatedCreds } = await googlePages<GoogleEvent>(url, params.creds, params.signal);
+  return { events: items, updatedCreds };
 }
 
 export function eventToDbRow(
@@ -95,9 +114,12 @@ export function eventToDbRow(
   const endRaw = ev.end.dateTime ?? ev.end.date;
   if (!startRaw || !endRaw) return null;
 
-  // Google returns all-day as YYYY-MM-DD; normalize to an ISO at midnight local.
-  const start = allDay ? new Date(startRaw + "T00:00:00") : new Date(startRaw);
-  const end = allDay ? new Date(endRaw + "T00:00:00") : new Date(endRaw);
+  // All-day values are civil dates, encoded at UTC midnight consistently on every host.
+  const start = allDay ? new Date(startRaw + "T00:00:00Z") : new Date(startRaw);
+  const end = allDay ? new Date(endRaw + "T00:00:00Z") : new Date(endRaw);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    throw new Error("Google returned an invalid event time");
+  }
 
   return {
     family_id: opts.familyId,

@@ -2,6 +2,7 @@
 
 import MemberAvatar from "@/components/family/member-avatar";
 import type { ChoreTemplate, FamilyMember } from "@/lib/types";
+import { useDialog } from "@/lib/use-dialog";
 
 interface JobClaimModalProps {
   job: ChoreTemplate;
@@ -12,6 +13,7 @@ interface JobClaimModalProps {
 }
 
 export default function JobClaimModal({ job, kids, gateByKid, onPick, onCancel }: JobClaimModalProps) {
+  const dialog = useDialog(true, onCancel);
   return (
     <div
       onClick={onCancel}
@@ -19,6 +21,7 @@ export default function JobClaimModal({ job, kids, gateByKid, onPick, onCancel }
       style={{ background: "#1C1A14CC" }}
     >
       <div
+        ref={dialog} role="dialog" aria-modal="true" aria-label={`Who completed ${job.name}?`} tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md rounded-cc-lg px-8 py-8 text-center"
         style={{ background: "#FAF6E8" }}

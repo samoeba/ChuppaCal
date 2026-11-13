@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { MealPlan, MealSlot } from "@/lib/types";
-import { setMeal, deleteMeal } from "@/app/actions/meals";
+import type { List, MealPlan, MealSlot } from "@/lib/types";
+import { setMeal, deleteMeal, mealToGrocery } from "@/app/actions/meals";
+import { createClient } from "@/lib/supabase/client";
+import { useRef } from "react";
+import { useDialog } from "@/lib/use-dialog";
 
 const FOOD_EMOJIS = [
   "🍳", "🥞", "🥗", "🍕", "🍔", "🌮",
@@ -31,7 +34,14 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
   const [name, setName] = useState(meal?.name ?? "");
   const [emoji, setEmoji] = useState<string | null>(meal?.emoji ?? null);
   const [saving, setSaving] = useState(false);
+  const [recipeUrl, setRecipeUrl] = useState(meal?.recipe_url ?? "");
+  const [ingredients, setIngredients] = useState((meal?.ingredients ?? []).join("\n"));
+  const [lists, setLists] = useState<List[] | null>(null);
+  const [listId, setListId] = useState("");
+  const [notice, setNotice] = useState("");
+  const transfer = useRef<{ key: string; id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const dialog = useDialog(true, saving ? undefined : onClose);
 
   const dateLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
     weekday: "long",
@@ -41,11 +51,11 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
 
   async function handleSave() {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || saving) return;
     setSaving(true);
     setError(null);
     try {
-      const saved = await setMeal(familyId, date, slot, trimmed, emoji);
+      const saved = await setMeal(familyId, date, slot, trimmed, emoji, recipeUrl, ingredientLines());
       onSave(saved);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
@@ -53,8 +63,32 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
     }
   }
 
+  function ingredientLines() { return ingredients.split("\n").map((line) => line.trim()).filter(Boolean); }
+  async function chooseList() {
+    setSaving(true); setError(null);
+    try {
+      const { data, error } = await createClient().from("lists").select("*").eq("family_id", familyId).order("sort_order");
+      if (error) throw new Error("Could not load your lists");
+      setLists(data ?? []); setListId(data?.[0]?.id ?? "");
+    } catch (error) { setError(error instanceof Error ? error.message : "Please retry"); }
+    finally { setSaving(false); }
+  }
+  async function addIngredients() {
+    if (!meal || !listId || saving) return;
+    setSaving(true); setError(null);
+    try {
+      const items = ingredientLines();
+      const key = JSON.stringify([meal.id,listId,items]);
+      if (transfer.current?.key !== key) transfer.current = { key, id: crypto.randomUUID() };
+      const count = await mealToGrocery(meal.id,listId,items,transfer.current.id);
+      setNotice(`${count} ingredient${count===1 ? "" : "s"} added. Existing unchecked items were skipped.`);
+      setLists(null);
+    } catch (error) { setError(error instanceof Error ? error.message : "Could not add ingredients"); }
+    finally { setSaving(false); }
+  }
+
   async function handleDelete() {
-    if (!meal) return;
+    if (!meal || saving) return;
     setSaving(true);
     setError(null);
     try {
@@ -68,12 +102,13 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
 
   return (
     <div
-      onClick={onClose}
+      onClick={saving ? undefined : onClose}
       className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4"
     >
       <div
+        ref={dialog} role="dialog" aria-modal="true" aria-label={`${SLOT_LABELS[slot]} · ${dateLabel}`} tabIndex={-1} aria-busy={saving}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl p-6 w-full max-w-sm"
+        className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90dvh] overflow-y-auto"
       >
         <p className="text-sm font-semibold text-cc-ink/50 mb-2">
           {SLOT_LABELS[slot]} · {dateLabel}
@@ -81,11 +116,11 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
 
         <input
           type="text"
+          aria-label="Meal name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
           placeholder="What's cooking?"
-          autoFocus
           className="w-full border border-slate-200 rounded-xl px-4 py-3 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-sky"
         />
 
@@ -94,6 +129,8 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
           {FOOD_EMOJIS.map((e) => (
             <button
               key={e}
+              aria-label={`Use ${e} emoji`}
+              aria-pressed={emoji === e}
               onClick={() => setEmoji(emoji === e ? null : e)}
               className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center touch-manipulation ${
                 emoji === e
@@ -106,7 +143,18 @@ export default function MealModal({ date, slot, meal, familyId, onSave, onDelete
           ))}
         </div>
 
-        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+        <label className="block text-sm mb-3">Recipe link (optional)<input type="url" value={recipeUrl} onChange={(e) => setRecipeUrl(e.target.value)} placeholder="https://…" className="w-full min-h-11 rounded-xl border border-cc-line px-3 mt-1" /></label>
+        {/^https?:\/\//.test(recipeUrl) && <a href={recipeUrl} target="_blank" rel="noopener noreferrer" className="inline-block underline text-sm mb-3 min-h-11">Open recipe ↗</a>}
+        <label className="block text-sm mb-3">Ingredients · one per line<textarea rows={4} value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder={"1 box pasta\n2 tomatoes"} className="w-full rounded-xl border border-cc-line px-3 py-2 mt-1" /></label>
+        {meal && ingredientLines().length > 0 && JSON.stringify(ingredientLines()) === JSON.stringify(meal.ingredients ?? []) && <button disabled={saving} onClick={chooseList} className="min-h-11 px-3 bg-cc-cream rounded-xl mb-3">Add ingredients to a list…</button>}
+        {meal && JSON.stringify(ingredientLines()) !== JSON.stringify(meal.ingredients ?? []) && ingredientLines().length > 0 && <p className="text-sm mb-3">Save ingredient changes before adding them to a list.</p>}
+        {!meal && ingredientLines().length > 0 && <p className="text-sm mb-3">Save this meal first, then reopen it to add ingredients to a list.</p>}
+        {lists && <div className="rounded-xl border border-cc-line p-3 mb-3">
+          <p className="text-sm mb-2">Add these {ingredientLines().length} ingredients. Exact duplicates already unchecked on the list will be skipped.</p>
+          {lists.length ? <><select aria-label="Destination grocery list" value={listId} onChange={(e) => setListId(e.target.value)} className="w-full min-h-11 border rounded-lg px-2">{lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}</select><button disabled={saving} onClick={addIngredients} className="min-h-11 px-3 underline">Confirm add</button></> : <p>Create a list on the Lists page first.</p>}
+        </div>}
+        <p role="status" className="text-sm mb-3">{notice}</p>
+        {error && <p role="alert" className="text-red-700 text-sm mb-3">{error}</p>}
 
         <div className="flex gap-2">
           <button

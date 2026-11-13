@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
+  { href: "/today", icon: "☀️", label: "Today" },
   { href: "/calendar", icon: "📅", label: "Calendar" },
   { href: "/chores", icon: "✅", label: "Chores" },
   { href: "/meals", icon: "🍽️", label: "Meals" },
@@ -41,6 +42,7 @@ export default function Sidebar() {
               }`}
               title={item.label}
               aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
             >
               {item.icon}
             </Link>
@@ -56,15 +58,16 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 py-2 px-3 rounded-cc-md touch-manipulation transition-colors ${
+              className={`flex flex-1 min-w-0 flex-col items-center gap-0.5 py-2 px-1 rounded-cc-md touch-manipulation transition-colors ${
                 isActive
                   ? "bg-cc-ink text-cc-white"
                   : "text-cc-ink-dim"
               }`}
               aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
             >
               <span className="text-xl">{item.icon}</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider">
+              <span className="text-[10px] font-bold">
                 {item.label}
               </span>
             </Link>
