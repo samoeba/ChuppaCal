@@ -1,16 +1,38 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/today", icon: "☀️", label: "Today" },
-  { href: "/calendar", icon: "📅", label: "Calendar" },
-  { href: "/chores", icon: "✅", label: "Chores" },
-  { href: "/meals", icon: "🍽️", label: "Meals" },
-  { href: "/lists", icon: "📝", label: "Lists" },
-  { href: "/settings", icon: "⚙️", label: "Settings" },
+  { href: "/today", icon: null, label: "Today" },
+  { href: "/calendar", icon: "calendar.svg", label: "Calendar" },
+  { href: "/chores", icon: "tasks.svg", label: "Chores" },
+  { href: "/meals", icon: "meals.svg", label: "Meals" },
+  { href: "/lists", icon: "lists.svg", label: "Lists" },
+  { href: "/settings", icon: "settings.svg", label: "Settings" },
 ];
+
+function NavIcon({ icon }: { icon: string | null }) {
+  if (!icon) {
+    return (
+      <span aria-hidden="true" className="flex size-6 items-center justify-center text-xl md:size-9 md:text-3xl">
+        ☀️
+      </span>
+    );
+  }
+
+  return (
+    <Image
+      src={`/chuppacal-sidebar-icons/${icon}`}
+      alt=""
+      width={36}
+      height={36}
+      className="size-6 md:size-9"
+      unoptimized
+    />
+  );
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -22,6 +44,7 @@ export default function Sidebar() {
         {/* Wordmark */}
         <Link
           href="/calendar"
+          prefetch
           className="mb-4 text-display-md leading-none text-cc-ink select-none"
           style={{ fontFamily: "var(--font-display)" }}
           title="ChuppaCal"
@@ -35,16 +58,17 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`w-16 h-16 rounded-cc-pill flex items-center justify-center text-3xl touch-manipulation transition-colors ${
+              prefetch={item.href === "/settings" ? undefined : true}
+              className={`w-16 h-16 rounded-cc-pill flex items-center justify-center touch-manipulation transition-colors ${
                 isActive
-                  ? "bg-cc-ink text-cc-white"
+                  ? "bg-cc-beige ring-2 ring-inset ring-cc-ink text-cc-ink"
                   : "bg-transparent text-cc-ink hover:bg-cc-beige active:bg-cc-beige"
               }`}
               title={item.label}
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
             >
-              {item.icon}
+              <NavIcon icon={item.icon} />
             </Link>
           );
         })}
@@ -58,15 +82,16 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={item.href === "/settings" ? undefined : true}
               className={`flex flex-1 min-w-0 flex-col items-center gap-0.5 py-2 px-1 rounded-cc-md touch-manipulation transition-colors ${
                 isActive
-                  ? "bg-cc-ink text-cc-white"
+                  ? "bg-cc-beige ring-2 ring-inset ring-cc-ink text-cc-ink"
                   : "text-cc-ink-dim"
               }`}
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
             >
-              <span className="text-xl">{item.icon}</span>
+              <NavIcon icon={item.icon} />
               <span className="text-[10px] font-bold">
                 {item.label}
               </span>
