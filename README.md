@@ -16,7 +16,7 @@ This remains a household prototype, not a secure multi-tenant product. Approval 
 - Expectations, extra-work claims, star balances, and reward redemptions via family-scoped database transactions; atomic template/assignment edits.
 - Weekly meals with recipe links/ingredients and an explicit, deduplicated grocery-list transfer; shared lists and idempotent starter-list creation.
 - Family-scoped Realtime *invalidation* (no row payloads), with the existing refresh-on-return/polling fallback.
-- Kiosk touch keyboard, optional scheduled sleep and idle clock cycling existing family member photos. Both display modes default off. Optional read-only offline Today snapshot is opt-in per device and expires after seven days; it does not queue writes or cache authenticated pages.
+- Kiosk touch keyboard, optional scheduled sleep and a photo screensaver after five idle minutes by default. Both display modes default off. In Settings, add photos to the Screensaver album, enable the photo screensaver, and turn on kiosk mode on the wall device. The album is private to the signed-in family. Optional read-only offline Today snapshot is opt-in per device and expires after seven days; it does not queue writes or cache authenticated pages.
 
 The intended IANA timezone defaults to `America/Chicago` until the household selects another one in Settings. Historical dates are not automatically rewritten.
 
@@ -24,7 +24,7 @@ The intended IANA timezone defaults to `America/Chicago` until the household sel
 
 1. Use Node.js 22.20+; run `npm ci --ignore-scripts`.
 2. Copy `.env.example` to `.env.local` and enter **development** Supabase/Google credentials. Never commit real credentials. The service-role key is server-only and bypasses RLS.
-3. Use a separate Supabase development project. Apply `supabase/migrations/001`–`009` in filename order to a new empty project. **Never replay 003 against live data:** it drops the old chore-assignment model. The existing live project already has 005–009; do not replay them or assume the dashboard recorded CLI migration history.
+3. Use a separate Supabase development project. Apply `supabase/migrations/001`–`010` in filename order to a new empty project. **Never replay 003 against live data:** it drops the old chore-assignment model. The existing live project already has 005–009; do not replay them or assume the dashboard recorded CLI migration history. Apply 010 once to enable the private screensaver album.
 4. Configure Google sign-in in Supabase Auth and the separate Calendar OAuth callback (`/api/calendar/google/callback`) for each intended origin. The login account and connected calendar account can differ.
 5. Run `npm run dev` and open `http://localhost:3000`. Create a test family, add children, connect a test calendar, and try chores, meals, and lists.
 

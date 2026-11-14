@@ -29,8 +29,13 @@ try {
     grant execute on function auth.uid() to anon, authenticated, service_role;
     alter default privileges in schema public grant select,insert,update,delete on tables to anon,authenticated,service_role;
     create schema storage;
-    create table storage.buckets(id text primary key,name text,public boolean);
+    create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
     create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);
+    alter table storage.objects enable row level security;
+    grant usage on schema storage to anon, authenticated;
+    grant select,insert,delete on storage.objects to anon, authenticated;
+    create function storage.foldername(text) returns text[] language sql immutable
+      as $$ select (string_to_array($1, '/'))[1:cardinality(string_to_array($1, '/')) - 1] $$;
     create schema realtime;
     create table realtime.messages(id bigint,extension text,topic text);
     alter table realtime.messages enable row level security;
@@ -44,6 +49,7 @@ try {
   }
   file("tests/database/workflows.sql");
   file("tests/database/calendar-meals.sql");
+  file("tests/database/screensaver.sql");
   const redemption = (requestId) => new Promise((resolveResult, reject) => {
     const child = spawn(join(bin, "psql"), ["-X", "-q", "-v", "ON_ERROR_STOP=1"], { env, stdio: ["pipe","pipe","pipe"] });
     let error = "";

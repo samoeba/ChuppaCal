@@ -14,6 +14,7 @@ import ListsSection from "@/components/settings/lists-section";
 import KioskModeSection from "@/components/settings/kiosk-mode-section";
 import { updateDisplaySettings } from "@/app/actions/settings";
 import DisplaySettingsSection from "@/components/settings/display-settings-section";
+import ScreensaverAlbum from "@/components/settings/screensaver-album";
 import { clearOfflineSnapshot } from "@/components/offline-snapshot";
 import CalendarConnectionControls from "@/components/settings/calendar-connection-controls";
 import MemberAvatar from "@/components/family/member-avatar";
@@ -456,6 +457,7 @@ export default function SettingsPage() {
 
         <KioskModeSection />
         <DisplaySettingsSection settings={family.settings} />
+        <ScreensaverAlbum key={family.id} familyId={family.id} />
 
         {/* Display / Weather */}
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
