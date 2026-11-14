@@ -12,7 +12,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ nam
   if (error || !data || !SCREENSAVER_PHOTO_TYPES.includes(data.type)) {
     return new Response(null, { status: 404 });
   }
-  return new Response(data, {
+  return new Response(data.stream(), {
     headers: { "Content-Type": data.type, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
   });
 }
