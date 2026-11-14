@@ -35,6 +35,7 @@ const AVATARS = [
 export default function SettingsPage() {
   const router = useRouter();
   const { familyId } = useFamilyRuntime();
+  const [accountEmail, setAccountEmail] = useState<string | null>();
   const [family, setFamily] = useState<Family | null>(null);
   const [familyNameDraft, setFamilyNameDraft] = useState<string | null>(null);
   const [savingFamilyName, setSavingFamilyName] = useState(false);
@@ -66,6 +67,20 @@ export default function SettingsPage() {
   const [lists, setLists] = useState<List[]>([]);
 
   const [supabase] = useState(createClient);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadAccountEmail() {
+      const email = await supabase.auth.getUser()
+        .then(({ data, error }) => error ? null : data.user?.email || null)
+        .catch(() => null);
+      if (active) setAccountEmail(email);
+    }
+
+    void loadAccountEmail();
+    return () => { active = false; };
+  }, [supabase]);
 
   const loadData = useCallback(async () => {
     try {
@@ -553,6 +568,12 @@ export default function SettingsPage() {
 
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-2">Account</h2>
+          <dl className="mb-4 text-sm">
+            <dt className="font-medium text-slate-600">Google sign-in email</dt>
+            <dd className="mt-1 wrap-anywhere text-slate-900" aria-live="polite">
+              {accountEmail === undefined ? "Loading…" : accountEmail ?? "Email unavailable"}
+            </dd>
+          </dl>
           <p className="text-sm text-slate-400 mb-4">
             Signs out of ChuppaCal on this device only. Other devices stay signed in.
           </p>
