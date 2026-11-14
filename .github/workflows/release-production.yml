@@ -22,6 +22,8 @@ jobs:
     if: github.repository == 'samoeba/ChuppaCal' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release/screensaver-010')
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      TZ: America/Chicago
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
