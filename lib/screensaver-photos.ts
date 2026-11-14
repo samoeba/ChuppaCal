@@ -1,5 +1,5 @@
 export const SCREENSAVER_BUCKET = "screensaver-photos";
-export const SCREENSAVER_PHOTO_LIMIT = 50;
+export const SCREENSAVER_PHOTO_LIMIT = 60;
 export const SCREENSAVER_PHOTO_SIZE = 5 * 1024 * 1024;
 export const SCREENSAVER_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 

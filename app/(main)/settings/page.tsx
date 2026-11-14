@@ -12,7 +12,7 @@ import StarRewardsSection from "@/components/settings/star-rewards-section";
 import MealSlotsSection from "@/components/settings/meal-slots-section";
 import ListsSection from "@/components/settings/lists-section";
 import KioskModeSection from "@/components/settings/kiosk-mode-section";
-import { updateDisplaySettings } from "@/app/actions/settings";
+import { updateDisplaySettings, updateFamilyName } from "@/app/actions/settings";
 import DisplaySettingsSection from "@/components/settings/display-settings-section";
 import ScreensaverAlbum from "@/components/settings/screensaver-album";
 import { clearOfflineSnapshot } from "@/components/offline-snapshot";
@@ -36,6 +36,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const { familyId } = useFamilyRuntime();
   const [family, setFamily] = useState<Family | null>(null);
+  const [familyNameDraft, setFamilyNameDraft] = useState<string | null>(null);
+  const [savingFamilyName, setSavingFamilyName] = useState(false);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [connections, setConnections] = useState<CalendarConnectionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +128,19 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveFamilyName() {
+    const name = familyNameDraft?.trim();
+    if (!family || !name || name === family.name || savingFamilyName) return;
+    setSavingFamilyName(true);
+    await runMutation(async () => {
+      const savedName = await updateFamilyName(name);
+      setFamily((current) => current && { ...current, name: savedName });
+      setFamilyNameDraft(null);
+      setStatus("Family name saved.");
+    });
+    setSavingFamilyName(false);
+  }
+
   async function updateConnection(id: string, fields: Partial<CalendarConnectionSummary>) {
     await runMutation(async () => {
     const response = await fetch(`/api/calendar/connections/${id}`, {
@@ -152,7 +167,7 @@ export default function SettingsPage() {
     setSavingWeather(true);
     await runMutation(async () => {
       const nextSettings = await updateDisplaySettings({ weather_location: weatherLocation.trim() });
-      setFamily({ ...family, settings: nextSettings });
+      setFamily((current) => current && { ...current, settings: nextSettings });
       setStatus("Weather location saved.");
     });
     setSavingWeather(false);
@@ -282,6 +297,8 @@ export default function SettingsPage() {
   }
 
   const pinHash = family.settings.pin_hash ?? "";
+  const familyName = familyNameDraft ?? family.name;
+  const canSaveFamilyName = familyName.trim().length > 0 && familyName.trim() !== family.name;
 
   return (
     <PinGate familyPin={pinHash}>
@@ -289,6 +306,38 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-slate-900 mb-6">⚙️ Settings</h1>
         {error && <p role="alert" className="text-red-700 mb-4">{error}</p>}
         {status && <p role="status" className="text-green-800 mb-4">{status}</p>}
+
+        <form
+          className="rounded-2xl bg-white border border-cc-line p-6 mb-6"
+          aria-busy={savingFamilyName}
+          data-unsaved={familyName !== family.name}
+          onSubmit={(event) => { event.preventDefault(); void saveFamilyName(); }}
+        >
+          <label htmlFor="family-name" className="block text-lg font-semibold">Family name</label>
+          <p id="family-name-hint" className="mt-1 mb-4 text-sm text-cc-ink-dim">
+            This is who Today says hello to. Try “The Casey Family” or “Team Casey.”
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <input
+              id="family-name"
+              type="text"
+              aria-describedby="family-name-hint"
+              maxLength={100}
+              required
+              value={familyName}
+              disabled={savingFamilyName}
+              onChange={(event) => setFamilyNameDraft(event.target.value === family.name ? null : event.target.value)}
+              className="w-full sm:flex-1 min-w-0 min-h-11 rounded-xl border border-cc-line bg-cc-cream px-3"
+            />
+            <button
+              type="submit"
+              disabled={!canSaveFamilyName || savingFamilyName}
+              className="min-h-11 rounded-full bg-cc-ink px-5 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {savingFamilyName ? "Saving…" : "Save family name"}
+            </button>
+          </div>
+        </form>
 
         {/* Family Members */}
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">

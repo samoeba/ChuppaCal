@@ -32,7 +32,12 @@ export default async function TodayPage() {
   const stale = connections.data?.some((connection) => connection.last_sync_error || !connection.last_synced_at || +now-new Date(connection.last_synced_at).getTime()>20*60_000);
   return <div className="max-w-6xl mx-auto space-y-6">
     <header className="flex flex-wrap items-end justify-between gap-4 py-4">
-      <div><p className="text-sm uppercase tracking-widest text-cc-ink-dim">{family.name} · {dayLabel(now)}</p><h1 className="text-display-xl text-sky mt-2" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem,7vw,6rem)", lineHeight: 1 }}>Hello, today.</h1></div>
+      <div className="min-w-0">
+        <p className="text-sm uppercase tracking-widest text-cc-ink-dim">{dayLabel(now)}</p>
+        <h1 className="text-display-xl text-sky mt-2 wrap-anywhere" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem,7vw,6rem)", lineHeight: 1 }}>
+          Hello, {family.name.trim() || "today"}.
+        </h1>
+      </div>
       <div className="text-right"><p className="text-4xl font-bold"><TodayClock /></p><p className="text-sm text-cc-ink-dim mt-2">{timeZone.replaceAll("_", " ")}</p></div>
     </header>
     {stale && <p role="status" className="rounded-xl bg-sun/30 px-4 py-3">Calendar updates are delayed. <Link className="underline font-bold" href="/settings">Check sync status</Link></p>}
