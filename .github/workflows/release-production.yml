@@ -1,8 +1,6 @@
 name: Release ChuppaCal to production
 
 on:
-  push:
-    branches: [release/screensaver-010]
   workflow_dispatch:
     inputs:
       apply_screensaver_migration:
@@ -19,7 +17,7 @@ concurrency:
 
 jobs:
   check:
-    if: github.repository == 'samoeba/ChuppaCal' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release/screensaver-010')
+    if: github.repository == 'samoeba/ChuppaCal' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -61,7 +59,7 @@ jobs:
       - name: Apply and verify Supabase migration 010
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          APPLY_SCREENSAVER_MIGRATION: ${{ github.event_name == 'push' || inputs.apply_screensaver_migration }}
+          APPLY_SCREENSAVER_MIGRATION: ${{ inputs.apply_screensaver_migration }}
         run: node scripts/release-screensaver-migration.mjs
       - name: Deploy to Vercel production
         env:
