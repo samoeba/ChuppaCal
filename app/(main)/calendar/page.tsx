@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import CalendarBody from "@/components/calendar/calendar-body";
 import CalendarHeader from "@/components/calendar/calendar-header";
@@ -10,7 +9,6 @@ import {
   rangeForView,
   toDateParam,
 } from "@/lib/calendar";
-import { createClient } from "@/lib/supabase/server";
 import { readAllRows } from "@/lib/pagination";
 import type { CalendarEvent, FamilyMember } from "@/lib/types";
 import { loadFamily } from "@/lib/load-family";
@@ -23,27 +21,10 @@ export default async function CalendarPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const params = await searchParams;
+  const [params, { supabase, family }] = await Promise.all([searchParams, loadFamily()]);
   const view = parseView(params.view);
-  const { family } = await loadFamily();
   const timeZone = familyTimeZone(family.settings.time_zone);
   const date = parseDate(params.date, timeZone);
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: viewer } = await supabase
-    .from("family_members")
-    .select("family_id")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!viewer) redirect("/onboarding");
-
-  const familyId = viewer.family_id as string;
 
   const { start, end } = rangeForView(view, date);
   // All-day values encode civil dates at UTC midnight, while timed events are instants.
@@ -55,12 +36,12 @@ export default async function CalendarPage({
     supabase
       .from("family_members")
       .select("*")
-      .eq("family_id", familyId)
+      .eq("family_id", family.id)
       .order("created_at"),
     readAllRows<CalendarEvent>((from, to) => supabase
       .from("calendar_events")
       .select("*")
-      .eq("family_id", familyId)
+      .eq("family_id", family.id)
       .gte("end_time", queryStart.toISOString())
       .lt("start_time", queryEnd.toISOString())
       .order("start_time").order("id").range(from, to)),
@@ -74,7 +55,7 @@ export default async function CalendarPage({
     member: ev.member_id ? membersById.get(ev.member_id) ?? null : null,
   }));
 
-  const weatherLocation = family?.settings?.weather_location ?? "";
+  const weatherLocation = family.settings.weather_location ?? "";
 
   return (
     <div>

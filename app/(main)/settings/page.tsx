@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useFamilyRuntime } from "@/components/family-runtime";
 import PinGate from "@/components/pin-gate";
 import type { CalendarConnectionSummary, ChoreTemplate, ChoreTemplateMember, Family, FamilyMember, List, StarReward } from "@/lib/types";
 import ChoreTemplatesSection from "@/components/settings/chore-templates-section";
@@ -32,6 +33,7 @@ const AVATARS = [
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { familyId } = useFamilyRuntime();
   const [family, setFamily] = useState<Family | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [connections, setConnections] = useState<CalendarConnectionSummary[]>([]);
@@ -64,25 +66,16 @@ export default function SettingsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) throw new Error("Please sign in again");
-
-      const { data: member, error: memberError } = await supabase
-        .from("family_members")
-        .select("family_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (memberError || !member) throw new Error("Could not load your family membership");
-
+      // The layout verifies membership. Supabase still enforces RLS on every read.
       const responses = await Promise.all([
-        supabase.from("families").select("*").eq("id", member.family_id).single(),
-        supabase.from("family_members").select("*").eq("family_id", member.family_id).order("created_at"),
+        supabase.from("families").select("*").eq("id", familyId).single(),
+        supabase.from("family_members").select("*").eq("family_id", familyId).order("created_at"),
         // Credentials must never be downloaded by the settings UI.
-        supabase.from("calendar_connections").select("id,family_id,member_id,provider,calendar_external_id,calendar_name,last_synced_at,last_sync_attempt_at,last_sync_error,created_at").eq("family_id", member.family_id).order("created_at"),
-        supabase.from("chore_templates").select("*").eq("family_id", member.family_id).eq("active", true).order("created_at"),
-        supabase.from("star_rewards").select("*").eq("family_id", member.family_id).order("star_cost"),
-        supabase.from("lists").select("*").eq("family_id", member.family_id).order("sort_order").order("created_at"),
+        supabase.from("calendar_connections").select("id,family_id,member_id,provider,calendar_external_id,calendar_name,last_synced_at,last_sync_attempt_at,last_sync_error,created_at").eq("family_id", familyId).order("created_at"),
+        supabase.from("chore_templates").select("*,chore_template_members(member_id)").eq("family_id", familyId).eq("active", true).order("created_at")
+          .overrideTypes<(ChoreTemplate & { chore_template_members: Pick<ChoreTemplateMember, "member_id">[] })[], { merge: false }>(),
+        supabase.from("star_rewards").select("*").eq("family_id", familyId).order("star_cost"),
+        supabase.from("lists").select("*").eq("family_id", familyId).order("sort_order").order("created_at"),
       ]);
       if (responses.some((response) => response.error)) throw new Error("Could not load all settings. Please retry.");
       const [{ data: familyData }, { data: membersData }, { data: connectionsData }, { data: templatesData }, { data: rewardsData }, { data: listsData }] = responses;
@@ -95,26 +88,12 @@ export default function SettingsPage() {
       }
       if (membersData) setMembers(membersData);
 
-      const templateIds = (templatesData ?? []).map((t: ChoreTemplate) => t.id);
-      const { data: templateMembersData, error: assignmentsError } = templateIds.length > 0
-        ? await supabase
-            .from("chore_template_members")
-            .select("*")
-            .in("template_id", templateIds)
-        : { data: [], error: null };
-      if (assignmentsError) throw new Error("Could not load chore assignments");
-
-      const loaded = (templatesData ?? []) as ChoreTemplate[];
-      const expectations = loaded.filter((t) => t.category === "expectation");
+      const loaded = (templatesData ?? []).map(({ chore_template_members, ...template }) => ({
+        ...template,
+        memberIds: chore_template_members.map(({ member_id }) => member_id),
+      }));
+      setTemplates(loaded.filter((t) => t.category === "expectation"));
       setJobs(loaded.filter((t) => t.category === "extra_work"));
-
-      const allTMs = (templateMembersData ?? []) as ChoreTemplateMember[];
-      setTemplates(
-        expectations.map((t) => ({
-          ...t,
-          memberIds: allTMs.filter((tm) => tm.template_id === t.id).map((tm) => tm.member_id),
-        }))
-      );
       if (rewardsData) setRewards(rewardsData as StarReward[]);
 
       if (listsData) setLists(listsData as List[]);
@@ -123,7 +102,7 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [familyId, supabase]);
 
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => {

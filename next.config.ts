@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   turbopack: { root: process.cwd() },
+  experimental: {
+    // Keep prefetched household data in the browser briefly.
+    staleTimes: { static: 30 },
+  },
   async headers() {
     return [{
       source: "/:path*",

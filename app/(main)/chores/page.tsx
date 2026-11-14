@@ -1,5 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import ChoresBoard from "@/components/chores/chores-board";
 import { toDateString, startOfWeek } from "@/lib/chores";
 import { readAllRows } from "@/lib/pagination";
@@ -18,19 +16,8 @@ import type {
 export const dynamic = "force-dynamic";
 
 export default async function ChoresPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: selfMember } = await supabase
-    .from("family_members")
-    .select("family_id")
-    .eq("user_id", user.id)
-    .single();
-  if (!selfMember) redirect("/onboarding");
-
-  const familyId = selfMember.family_id;
-  const { family } = await loadFamily();
+  const { supabase, family } = await loadFamily();
+  const familyId = family.id;
   const today = zonedDate(new Date(), familyTimeZone(family.settings.time_zone));
   const todayStr = toDateString(today);
   const weekStart = startOfWeek(today);
@@ -40,7 +27,6 @@ export default async function ChoresPage() {
     members,
     templates,
     templateMembers,
-    completionsToday,
     completionsWeek,
     allCompletions,
     rewards,
@@ -59,11 +45,6 @@ export default async function ChoresPage() {
       .eq("family_id", familyId)
       .eq("active", true).order("id").range(from, to)),
     readAllRows<ChoreTemplateMember>((from, to) => supabase.from("chore_template_members").select("*").order("template_id").order("member_id").range(from, to)),
-    readAllRows<ChoreCompletion>((from, to) => supabase
-      .from("chore_completions")
-      .select("*")
-      .eq("family_id", familyId)
-      .eq("date", todayStr).order("id").range(from, to)),
     readAllRows<ChoreCompletion>((from, to) => supabase
       .from("chore_completions")
       .select("*")
@@ -87,7 +68,7 @@ export default async function ChoresPage() {
     (tm) => familyTemplateIds.has(tm.template_id)
   );
 
-  const todayCompletions = (completionsToday ?? []) as ChoreCompletion[];
+  const todayCompletions = completionsWeek.filter((completion) => completion.date === todayStr);
 
   // Expectations only. Extra work has no chore_template_members rows by design,
   // so this filter is belt-and-braces against a stray assignment.
@@ -98,9 +79,6 @@ export default async function ChoresPage() {
   }
 
   const claimsToday = todayCompletions.filter((c) => c.category === "extra_work");
-
-  type FamilyRow = { settings: { pin_hash: string | null } };
-  const pinHash = ((family as FamilyRow | null)?.settings?.pin_hash) ?? "";
 
   return (
     <ChoresBoard
@@ -114,7 +92,7 @@ export default async function ChoresPage() {
       jobs={jobs}
       claimsToday={claimsToday}
       familyId={familyId}
-      familyPin={pinHash}
+      familyPin={family.settings.pin_hash ?? ""}
       today={todayStr}
       weekStartStr={toDateString(weekStart)}
     />
