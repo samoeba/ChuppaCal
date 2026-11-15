@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import KioskDisplay from "@/components/kiosk-display";
 
@@ -18,8 +18,8 @@ const overlay = () => screen.queryByRole("dialog", { name: "Family photo screens
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-it("opens after five minutes despite background refreshes and rotates the album", () => {
-  const { rerender, container } = render(<KioskDisplay settings={settings} photos={photos} />);
+it("opens after five minutes, rotates both photo layers, and dismisses without a prompt", () => {
+  const { rerender } = render(<KioskDisplay settings={settings} photos={photos} />);
   for (let minute = 0; minute < 4; minute++) {
     advance(60_000);
     rerender(<KioskDisplay settings={{ ...settings }} photos={[...photos]} />);
@@ -27,17 +27,23 @@ it("opens after five minutes despite background refreshes and rotates the album"
   advance(59_999);
   expect(overlay()).toBeNull();
   advance(1);
-  expect(overlay()).not.toBeNull();
-  expect(container.querySelector("img")?.getAttribute("src")).toBe(photos[0]);
+  const display = screen.getByRole("dialog", { name: "Family photo screensaver" });
+  expect(within(display).queryByRole("button")).toBeNull();
+  const photoSources = () => Array.from(display.querySelectorAll("img"), (image) => image.getAttribute("src"));
+  expect(photoSources()).toEqual([photos[0], photos[0]]);
   advance(15_000);
-  expect(container.querySelector("img")?.getAttribute("src")).toBe(photos[1]);
+  expect(photoSources()).toEqual([photos[1], photos[1]]);
 
-  fireEvent.click(screen.getByRole("button", { name: "Tap or press any key to return" }));
+  fireEvent.click(display);
   expect(overlay()).toBeNull();
   advance(299_999);
   expect(overlay()).toBeNull();
   advance(1);
-  expect(overlay()).not.toBeNull();
+  const reopened = screen.getByRole("dialog", { name: "Family photo screensaver" });
+  advance(32);
+  expect(document.activeElement).toBe(reopened);
+  fireEvent.keyDown(document.activeElement!, { key: "a" });
+  expect(overlay()).toBeNull();
 });
 
 it("counts mouse movement as activity and stays out of an open editor", () => {

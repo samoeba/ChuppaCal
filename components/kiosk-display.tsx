@@ -82,16 +82,25 @@ export default function KioskDisplay({ settings, photos }: { settings: DisplaySe
       onClick={wake}
       className={`fixed inset-0 z-[100] flex flex-col items-center justify-center select-none ${sleeping ? "bg-black text-neutral-500" : "bg-cc-ink text-cc-cream"}`}>
       {showPhoto && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img key={photo} src={photo} alt="" draggable={false} onError={() => setFailedPhoto(photo)}
-          className="absolute inset-0 h-full w-full object-contain p-4 pb-20 sm:p-8 sm:pb-24 pointer-events-none" />
+        <div key={photo} className="pointer-events-none absolute inset-0 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photo} alt="" draggable={false}
+            className="absolute -inset-24 size-[calc(100%+12rem)] max-w-none object-cover blur-[32px]" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photo} alt="" draggable={false} onError={() => setFailedPhoto(photo)}
+            className="absolute top-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2" />
+        </div>
       )}
-      <p className={`tabular-nums ${showPhoto ? "absolute bottom-5 right-6 hidden text-3xl sm:block" : "text-[clamp(4rem,14vw,12rem)]"}`}
+      <p className={`tabular-nums ${showPhoto ? "absolute right-4 bottom-4 text-[min(7.5rem,12vw,20vh)] leading-none whitespace-nowrap [text-shadow:0_2px_6px_#000c,0_6px_24px_#0009] sm:right-6 sm:bottom-5" : "text-[clamp(4rem,14vw,12rem)]"}`}
         style={{ fontFamily: "var(--font-display)" }}>{time}</p>
-      <button type="button" className={`min-h-11 px-5 rounded-full border border-current ${showPhoto ? "absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap" : "mt-6"}`}>
-        Tap or press any key to return
-      </button>
-      {sleeping && <p className="text-sm mt-3">Wakes for 10 minutes, then follows the sleep schedule.</p>}
+      {sleeping && (
+        <>
+          <button type="button" className="mt-6 min-h-11 rounded-full border border-current px-5">
+            Tap or press any key to return
+          </button>
+          <p className="text-sm mt-3">Wakes for 10 minutes, then follows the sleep schedule.</p>
+        </>
+      )}
     </div>
   );
 }
