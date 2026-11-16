@@ -28,7 +28,7 @@ The intended IANA timezone defaults to `America/Chicago` until the household sel
 4. Configure Google sign-in in Supabase Auth and the separate Calendar OAuth callback (`/api/calendar/google/callback`) for each intended origin. The login account and connected calendar account can differ.
 5. Run `npm run dev` and open `http://localhost:3000`. Create a test family, add children, connect a test calendar, and try chores, meals, and lists.
 
-National Park and Geist Mono fonts are bundled from npm; Robuck Rounded is served from `public/fonts`. Builds do not download fonts from Google.
+National Park and Geist Mono are bundled from npm, and Robuck Rounded is served from `public/fonts`. The app bundles Google's Noto Color Emoji under the SIL Open Font License so the kiosk can render emojis without a system emoji font. All font files are available locally at build time. [Noto Emoji project](https://github.com/googlefonts/noto-emoji)
 
 ## Verification
 

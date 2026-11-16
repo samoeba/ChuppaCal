@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import "./emoji-font.css";
 import "./globals.css";
 import TouchKeyboardProvider from "@/components/keyboard/touch-keyboard-provider";
 
