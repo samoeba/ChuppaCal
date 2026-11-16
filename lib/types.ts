@@ -135,6 +135,14 @@ export interface MealPlan {
   created_at: string;
 }
 
+export interface MealRecipe {
+  id: string;
+  name: string;
+  emoji: string | null;
+  recipe_url: string | null;
+  ingredients: string[];
+}
+
 export interface List {
   id: string;
   family_id: string;

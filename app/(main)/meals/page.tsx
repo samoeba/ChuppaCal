@@ -1,11 +1,14 @@
 import MealBoard from "@/components/meals/meal-board";
-import type { MealPlan, MealSlot } from "@/lib/types";
+import type { MealPlan, MealRecipe, MealSlot } from "@/lib/types";
 import { loadFamily } from "@/lib/load-family";
+import { readAllRows } from "@/lib/pagination";
 import { familyTimeZone } from "@/lib/time-zone";
 import { addDays, parseDate, toDateParam } from "@/lib/calendar";
 import { startOfWeek } from "@/lib/chores";
 
 export const dynamic = "force-dynamic";
+
+const recipeBankMissing = new Error("Recipe bank migration is pending");
 
 function localDateStr(d: Date): string {
   return toDateParam(d);
@@ -20,12 +23,28 @@ export default async function MealsPage({
   const weekStart = startOfWeek(parseDate(week, familyTimeZone(family.settings.time_zone)));
   const weekEnd = addDays(weekStart, 6);
 
-  const { data: meals, error: mealsError } = await supabase
+  const [{ data: meals, error: mealsError }, recipes] = await Promise.all([
+    supabase
       .from("meal_plans")
       .select("*")
       .eq("family_id", family.id)
       .gte("date", localDateStr(weekStart))
-      .lte("date", localDateStr(weekEnd));
+      .lte("date", localDateStr(weekEnd)),
+    readAllRows<MealRecipe>(async (from, to) => {
+      const result = await supabase.from("meal_recipes")
+        .select("id,name,emoji,recipe_url,ingredients")
+        .eq("family_id", family.id)
+        .order("name")
+        .order("id")
+        .range(from, to);
+      // An automatic Vercel deployment can become active while Supabase is being migrated.
+      if (result.error?.code === "PGRST205" || result.error?.code === "42P01") throw recipeBankMissing;
+      return result;
+    }).catch((error: unknown) => {
+      if (error === recipeBankMissing) return null;
+      throw error;
+    }),
+  ]);
   if (mealsError) throw new Error("Could not load meal plans");
 
   const mealSlots: Record<MealSlot, boolean> = family.settings.meal_slots ?? {
@@ -39,6 +58,7 @@ export default async function MealsPage({
     <MealBoard
       key={localDateStr(weekStart)}
       meals={(meals ?? []) as MealPlan[]}
+      recipes={recipes}
       mealSlots={mealSlots}
       familyId={family.id}
       weekStartStr={localDateStr(weekStart)}

@@ -13,6 +13,7 @@ export async function setMeal(
   emoji: string | null,
   recipeUrl = "",
   ingredients: string[] = [],
+  saveRecipe = false,
 ): Promise<MealPlan> {
   const { supabase, familyId: verifiedFamilyId } = await requireFamilyContext(familyId);
   const recipe = recipeUrl.trim();
@@ -21,15 +22,28 @@ export async function setMeal(
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || recipe.length > 2048) throw new Error("Use a public http or https recipe link");
   }
   if (!Array.isArray(ingredients) || ingredients.length > 100) throw new Error("Use up to 100 ingredients");
-  const items = ingredients.map((item) => requireText(item, "Ingredient", 500));
-  const { data, error } = await supabase
-    .from("meal_plans")
-    .upsert(
-      { family_id: verifiedFamilyId, date: requireDate(date), slot: requireMealSlot(slot), name: requireText(name, "Meal name"), emoji: emoji === null ? null : requireText(emoji, "Emoji", 32), recipe_url: recipe || null, ingredients: items },
-      { onConflict: "family_id,date,slot" }
-    )
-    .select()
-    .single();
+  const meal = {
+    family_id: verifiedFamilyId,
+    date: requireDate(date),
+    slot: requireMealSlot(slot),
+    name: requireText(name, "Meal name"),
+    emoji: emoji === null ? null : requireText(emoji, "Emoji", 32),
+    recipe_url: recipe || null,
+    ingredients: ingredients.map((item) => requireText(item, "Ingredient", 500)),
+  };
+  const { data, error } = requireBoolean(saveRecipe)
+    ? await supabase.rpc("cc_set_meal_and_recipe", {
+      p_date: meal.date,
+      p_slot: meal.slot,
+      p_name: meal.name,
+      p_emoji: meal.emoji,
+      p_recipe_url: meal.recipe_url,
+      p_ingredients: meal.ingredients,
+    }).single()
+    : await supabase.from("meal_plans")
+      .upsert(meal, { onConflict: "family_id,date,slot" })
+      .select()
+      .single();
   if (error || !data) throw new Error(error?.message ?? "upsert failed");
   revalidatePath("/meals");
   revalidatePath("/today");
