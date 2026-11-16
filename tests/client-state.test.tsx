@@ -105,6 +105,17 @@ it.each([false, true])("supports a custom meal with recipe saving set to %s", as
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Soup", null, "", ["Broth", "Beans"], saveRecipe);
 });
+it("keeps custom meal planning available while the recipe migration is pending", async () => {
+  setMeal.mockResolvedValue({ id: "meal", date: "2026-09-21", slot: "dinner", name: "Soup" });
+  render(<MealBoard {...mealBoardProps} meals={[]} recipes={null} />);
+  fireEvent.click(screen.getAllByRole("button", { name: /plan meal/i })[0]);
+  const dialog = within(screen.getByRole("dialog"));
+  fireEvent.change(dialog.getByRole("textbox", { name: "Meal name" }), { target: { value: "Soup" } });
+  expect(dialog.queryByRole("checkbox", { name: "Save to recipe bank" })).toBeNull();
+  fireEvent.click(dialog.getByRole("button", { name: "Save meal" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Soup", null, "", [], false);
+});
 it("keeps reward form data and displays server failures", async () => {
   actions.reward.mockRejectedValue(new Error("Save failed"));
   render(<StarRewardsSection rewards={[]} familyId="family" />);

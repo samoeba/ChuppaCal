@@ -8,6 +8,8 @@ import { startOfWeek } from "@/lib/chores";
 
 export const dynamic = "force-dynamic";
 
+const recipeBankMissing = new Error("Recipe bank migration is pending");
+
 function localDateStr(d: Date): string {
   return toDateParam(d);
 }
@@ -28,12 +30,20 @@ export default async function MealsPage({
       .eq("family_id", family.id)
       .gte("date", localDateStr(weekStart))
       .lte("date", localDateStr(weekEnd)),
-    readAllRows<MealRecipe>((from, to) => supabase.from("meal_recipes")
-      .select("id,name,emoji,recipe_url,ingredients")
-      .eq("family_id", family.id)
-      .order("name")
-      .order("id")
-      .range(from, to)),
+    readAllRows<MealRecipe>(async (from, to) => {
+      const result = await supabase.from("meal_recipes")
+        .select("id,name,emoji,recipe_url,ingredients")
+        .eq("family_id", family.id)
+        .order("name")
+        .order("id")
+        .range(from, to);
+      // An automatic Vercel deployment can become active while Supabase is being migrated.
+      if (result.error?.code === "PGRST205" || result.error?.code === "42P01") throw recipeBankMissing;
+      return result;
+    }).catch((error: unknown) => {
+      if (error === recipeBankMissing) return null;
+      throw error;
+    }),
   ]);
   if (mealsError) throw new Error("Could not load meal plans");
 

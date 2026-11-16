@@ -13,7 +13,7 @@ import { addDays, toDateParam } from "@/lib/calendar";
 
 interface Props {
   meals: MealPlan[];
-  recipes: MealRecipe[];
+  recipes: MealRecipe[] | null;
   mealSlots: Record<MealSlot, boolean>;
   familyId: string;
   weekStartStr: string;

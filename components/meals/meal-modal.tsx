@@ -24,7 +24,7 @@ interface Props {
   date: string;
   slot: MealSlot;
   meal?: MealPlan;
-  recipes: MealRecipe[];
+  recipes: MealRecipe[] | null;
   familyId: string;
   onSave: (meal: MealPlan) => void;
   onDelete: (mealId: string) => void;
@@ -32,7 +32,7 @@ interface Props {
 }
 
 export default function MealModal({ date, slot, meal, recipes, familyId, onSave, onDelete, onClose }: Props) {
-  const [useSavedRecipe, setUseSavedRecipe] = useState(!meal);
+  const [recipeMode, setRecipeMode] = useState(!meal && recipes !== null);
   const [recipeId, setRecipeId] = useState("");
   const [saveRecipe, setSaveRecipe] = useState(false);
   const [name, setName] = useState(meal?.name ?? "");
@@ -46,10 +46,11 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
   const transfer = useRef<{ key: string; id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialog = useDialog(true, saving ? undefined : onClose);
-  const selectedRecipe = recipes.find((recipe) => recipe.id === recipeId);
+  const useSavedRecipe = recipeMode && recipes !== null;
+  const selectedRecipe = recipes?.find((recipe) => recipe.id === recipeId);
   const canSave = useSavedRecipe ? !!selectedRecipe : !!name.trim();
   const recipeName = name.trim().toLowerCase();
-  const matchesRecipeName = recipes.some((recipe) => recipe.name.trim().toLowerCase() === recipeName);
+  const matchesRecipeName = recipes?.some((recipe) => recipe.name.trim().toLowerCase() === recipeName);
 
   const dateLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
     weekday: "long",
@@ -67,7 +68,7 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
           familyId, date, slot, selectedRecipe.name, selectedRecipe.emoji,
           selectedRecipe.recipe_url ?? "", selectedRecipe.ingredients,
         )
-        : await setMeal(familyId, date, slot, name.trim(), emoji, recipeUrl, ingredientLines(), saveRecipe);
+        : await setMeal(familyId, date, slot, name.trim(), emoji, recipeUrl, ingredientLines(), recipes !== null && saveRecipe);
       onSave(saved);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
@@ -76,7 +77,7 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
   }
 
   function switchMode(saved: boolean) {
-    setUseSavedRecipe(saved);
+    setRecipeMode(saved);
     setError(null);
   }
 
@@ -131,7 +132,7 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
           {SLOT_LABELS[slot]} · {dateLabel}
         </p>
 
-        {!meal && (
+        {!meal && recipes !== null && (
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-cc-cream p-1" aria-label="Meal source" role="group">
             <button
               aria-pressed={useSavedRecipe}
@@ -195,10 +196,12 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
               <p className="text-sm mb-2">Add these {ingredientLines().length} ingredients. Exact duplicates already unchecked on the list will be skipped.</p>
               {lists.length ? <><select aria-label="Destination grocery list" value={listId} onChange={(e) => setListId(e.target.value)} className="w-full min-h-11 border rounded-lg px-2">{lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}</select><button disabled={saving} onClick={addIngredients} className="min-h-11 px-3 underline">Confirm add</button></> : <p>Create a list on the Lists page first.</p>}
             </div>}
-            <label className="mb-3 flex min-h-11 items-center gap-3 rounded-xl bg-cc-cream px-3 py-2 text-sm font-semibold">
-              <input type="checkbox" checked={saveRecipe} onChange={(event) => setSaveRecipe(event.target.checked)} className="size-5 shrink-0 accent-sky" />
-              {matchesRecipeName ? "Update recipe in the recipe bank" : "Save to recipe bank"}
-            </label>
+            {recipes !== null && (
+              <label className="mb-3 flex min-h-11 items-center gap-3 rounded-xl bg-cc-cream px-3 py-2 text-sm font-semibold">
+                <input type="checkbox" checked={saveRecipe} onChange={(event) => setSaveRecipe(event.target.checked)} className="size-5 shrink-0 accent-sky" />
+                {matchesRecipeName ? "Update recipe in the recipe bank" : "Save to recipe bank"}
+              </label>
+            )}
           </fieldset>
         )}
         <p role="status" className="text-sm mb-3">{notice}</p>
