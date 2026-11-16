@@ -86,6 +86,7 @@ export default function KioskDisplay({ settings, photos }: { settings: DisplaySe
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={photo} alt="" draggable={false}
             className="absolute -inset-24 size-[calc(100%+12rem)] max-w-none object-cover blur-[32px]" />
+          <div aria-hidden="true" className="absolute inset-0 bg-black/20" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={photo} alt="" draggable={false} onError={() => setFailedPhoto(photo)}
             className="absolute top-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2" />
