@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { MealPlan, MealSlot } from "@/lib/types";
+import type { MealPlan, MealRecipe, MealSlot } from "@/lib/types";
 import WeekNav from "./week-nav";
 import MealGrid from "./meal-grid";
 import MealModal from "./meal-modal";
@@ -13,6 +13,7 @@ import { addDays, toDateParam } from "@/lib/calendar";
 
 interface Props {
   meals: MealPlan[];
+  recipes: MealRecipe[];
   mealSlots: Record<MealSlot, boolean>;
   familyId: string;
   weekStartStr: string;
@@ -32,7 +33,7 @@ function getWeekDays(weekStartStr: string): string[] {
   });
 }
 
-export default function MealBoard({ meals, mealSlots, familyId, weekStartStr }: Props) {
+export default function MealBoard({ meals, recipes, mealSlots, familyId, weekStartStr }: Props) {
   const { timeZone } = useFamilyRuntime();
   const router = useRouter();
   const [optMeals, setOptMeals] = useServerState(meals);
@@ -88,6 +89,7 @@ export default function MealBoard({ meals, mealSlots, familyId, weekStartStr }: 
           date={selectedCell.date}
           slot={selectedCell.slot}
           meal={selectedCell.meal}
+          recipes={recipes}
           familyId={familyId}
           onSave={handleSave}
           onDelete={handleDelete}

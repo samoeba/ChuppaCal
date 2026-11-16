@@ -7,6 +7,10 @@ on:
         description: Apply migration 010 if the screensaver bucket is missing
         type: boolean
         default: false
+      apply_recipe_migration:
+        description: Apply migration 011 if the recipe bank is missing
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -56,11 +60,12 @@ jobs:
           node-version: 22
       - name: Install Vercel CLI
         run: npm install --prefix "$RUNNER_TEMP/chuppacal-vercel" vercel@65.16.0
-      - name: Apply and verify Supabase migration 010
+      - name: Apply and verify Supabase migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           APPLY_SCREENSAVER_MIGRATION: ${{ inputs.apply_screensaver_migration }}
-        run: node scripts/release-screensaver-migration.mjs
+          APPLY_RECIPE_MIGRATION: ${{ inputs.apply_recipe_migration }}
+        run: node scripts/release-database-migrations.mjs
       - name: Deploy to Vercel production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -43,12 +43,14 @@ try {
     create function realtime.send(jsonb,text,text,boolean default true) returns void language sql as $$ select $$;
   `);
   for (const migration of (await readdir("supabase/migrations")).filter((name) => name.endsWith(".sql")).sort()) {
+    if (migration.startsWith("011_")) file("tests/database/meal-recipes-fixture.sql");
     file(`supabase/migrations/${migration}`);
     if (migration.startsWith("004_")) file("tests/database/legacy-fixture.sql");
     console.log(`Applied ${migration} to isolated test database`);
   }
   file("tests/database/workflows.sql");
   file("tests/database/calendar-meals.sql");
+  file("tests/database/meal-recipes.sql");
   file("tests/database/screensaver.sql");
   const redemption = (requestId) => new Promise((resolveResult, reject) => {
     const child = spawn(join(bin, "psql"), ["-X", "-q", "-v", "ON_ERROR_STOP=1"], { env, stdio: ["pipe","pipe","pipe"] });

@@ -54,3 +54,36 @@ if (!status.bucket_ready || !status.policies_ready) {
   throw new Error("The private screensaver bucket or its family access policies are missing or incomplete");
 }
 console.log("Verified the private screensaver bucket and all three family access policies.");
+
+const recipeStatusSql = `
+  select
+    to_regclass('public.meal_recipes') is not null as table_exists,
+    to_regprocedure('public.cc_set_meal_and_recipe(date,text,text,text,text,text[])') is not null as function_exists,
+    exists (
+      select from pg_class
+      where oid = to_regclass('public.meal_recipes') and relrowsecurity
+    ) and exists (
+      select from pg_policies
+      where schemaname = 'public' and tablename = 'meal_recipes'
+        and policyname = 'Family access' and roles = array['authenticated']::name[]
+    ) as family_access_ready;
+`;
+
+async function recipeStatus() {
+  const rows = await runSql(recipeStatusSql, true);
+  if (!Array.isArray(rows) || typeof rows[0]?.table_exists !== "boolean") {
+    throw new Error("Supabase returned an unexpected response for the recipe bank check");
+  }
+  return rows[0];
+}
+
+let recipes = await recipeStatus();
+if (!recipes.table_exists && !recipes.function_exists && process.env.APPLY_RECIPE_MIGRATION === "true") {
+  const migration = new URL("../supabase/migrations/011_meal_recipes.sql", import.meta.url);
+  await runSql(await readFile(migration, "utf8"), false);
+  recipes = await recipeStatus();
+}
+if (!recipes.table_exists || !recipes.function_exists || !recipes.family_access_ready) {
+  throw new Error("Migration 011 is required before deploying the recipe bank");
+}
+console.log("Verified the recipe bank, family access policy, and atomic meal save function.");
