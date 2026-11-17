@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireFamilyContext } from "@/lib/family-context";
 import { requireBoolean, requireDate, requireId, requireMealSlot, requireText } from "@/lib/validation";
+import { MEAL_PLAN_FIELDS, MEAL_RECIPE_FIELDS, recipeHtmlUpload } from "@/lib/recipe-html";
 import type { MealPlan, MealRecipe, MealSlot } from "@/lib/types";
 
 function recipeDetails(name: string, emoji: string | null, recipeUrl: string, ingredients: string[], instructions: string) {
@@ -28,14 +29,18 @@ export async function saveMealRecipe(
   familyId: string,
   recipeId: string | null,
   details: Omit<MealRecipe, "id">,
+  attachment?: FormData,
 ): Promise<MealRecipe> {
   const { supabase, familyId: verifiedFamilyId } = await requireFamilyContext(familyId);
-  const recipe = recipeDetails(details.name, details.emoji, details.recipe_url ?? "", details.ingredients, details.instructions ?? "");
+  const recipe = {
+    ...recipeDetails(details.name, details.emoji, details.recipe_url ?? "", details.ingredients, details.instructions ?? ""),
+    ...await recipeHtmlUpload(attachment),
+  };
   const table = supabase.from("meal_recipes");
   const query = recipeId === null
     ? table.insert({ ...recipe, family_id: verifiedFamilyId })
     : table.update(recipe).eq("id", requireId(recipeId)).eq("family_id", verifiedFamilyId);
-  const { data, error } = await query.select("id,name,emoji,recipe_url,ingredients,instructions").single();
+  const { data, error } = await query.select(MEAL_RECIPE_FIELDS).single();
   if (error?.code === "23505") throw new Error("A recipe with that name already exists");
   if (error || !data) throw new Error(error?.message ?? "Could not save recipe");
   revalidatePath("/meals");
@@ -73,12 +78,25 @@ export async function setMeal(
     }).single()
     : await supabase.from("meal_plans")
       .upsert({ ...meal, ...(instructions !== undefined && { instructions: validatedInstructions }) }, { onConflict: "family_id,date,slot" })
-      .select()
+      .select(MEAL_PLAN_FIELDS)
       .single();
   if (error || !data) throw new Error(error?.message ?? "upsert failed");
   revalidatePath("/meals");
   revalidatePath("/today");
-  return data as MealPlan;
+  return Object.fromEntries(Object.entries(data).filter(([key]) => key !== "instructions_html")) as unknown as MealPlan;
+}
+
+export async function planSavedRecipe(familyId: string, recipeId: string, date: string, slot: MealSlot): Promise<MealPlan> {
+  const { supabase } = await requireFamilyContext(familyId);
+  const { data, error } = await supabase.rpc("cc_plan_saved_recipe", {
+    p_recipe_id: requireId(recipeId),
+    p_date: requireDate(date),
+    p_slot: requireMealSlot(slot),
+  }).single();
+  if (error || !data) throw new Error(error?.message ?? "Could not plan recipe");
+  revalidatePath("/meals");
+  revalidatePath("/today");
+  return Object.fromEntries(Object.entries(data).filter(([key]) => key !== "instructions_html")) as unknown as MealPlan;
 }
 
 export async function deleteMeal(mealId: string): Promise<void> {

@@ -116,3 +116,25 @@ if (!instructions.columns_ready || !instructions.function_exists) {
   throw new Error("Migration 012 is required before deploying recipe instructions");
 }
 console.log("Verified instructions on saved recipes and planned meals, and the instruction-aware atomic meal save function.");
+
+const htmlStatusSql = `
+  select
+    count(*) as columns_present,
+    count(*) filter (where data_type = 'text' and is_nullable = 'YES') = 4 as columns_ready,
+    to_regprocedure('public.cc_plan_saved_recipe(uuid,date,text)') is not null as function_exists
+  from information_schema.columns
+  where table_schema = 'public' and table_name in ('meal_recipes', 'meal_plans')
+    and column_name in ('instructions_html', 'instructions_html_name');
+`;
+async function htmlStatus() {
+  const [row] = await runSql(htmlStatusSql, true);
+  if (typeof row?.columns_ready !== "boolean") throw new Error("Unexpected HTML instruction schema response");
+  return row;
+}
+let html = await htmlStatus();
+if (Number(html.columns_present) === 0 && !html.function_exists && process.env.APPLY_RECIPE_HTML === "true") {
+  await runSql(await readFile(new URL("../supabase/migrations/013_recipe_html_instructions.sql", import.meta.url), "utf8"), false);
+  html = await htmlStatus();
+}
+if (!html.columns_ready || !html.function_exists) throw new Error("Migration 013 is required before deploying HTML recipe instructions");
+console.log("Verified HTML instruction fields and the family-scoped recipe planning function.");

@@ -15,6 +15,10 @@ on:
         description: Apply migration 012 if recipe instructions are missing
         type: boolean
         default: false
+      apply_recipe_html:
+        description: Apply migration 013 if HTML instructions are missing
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -68,6 +72,7 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           APPLY_SCREENSAVER_MIGRATION: ${{ inputs.apply_screensaver_migration }}
+          APPLY_RECIPE_HTML: ${{ inputs.apply_recipe_html }}
           APPLY_RECIPE_INSTRUCTIONS: ${{ inputs.apply_recipe_instructions }}
           APPLY_RECIPE_MIGRATION: ${{ inputs.apply_recipe_migration }}
         run: node scripts/release-database-migrations.mjs

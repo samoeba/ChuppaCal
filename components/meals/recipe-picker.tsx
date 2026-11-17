@@ -1,3 +1,4 @@
+import RecipeHtmlInstructions from "./recipe-html-instructions";
 import { useState } from "react";
 import type { MealRecipe } from "@/lib/types";
 
@@ -64,6 +65,7 @@ export default function RecipePicker({ recipes, selectedRecipe, onSelect, disabl
               Open recipe ↗
             </a>
           )}
+          {selectedRecipe.instructions_html_name && <RecipeHtmlInstructions id={selectedRecipe.id} source="recipe" name={selectedRecipe.instructions_html_name} />}
           <h3 className="mt-3 font-semibold">Instructions</h3>
           <p className="mt-1 whitespace-pre-wrap wrap-break-word text-cc-ink-dim">
             {selectedRecipe.instructions || "No instructions saved yet."}

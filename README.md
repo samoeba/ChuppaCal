@@ -63,3 +63,8 @@ Production is `https://chuppa-cal.vercel.app`. The September 27 direct deploymen
 - `tests`, `scripts`: regression suites and read-only/local database tools.
 
 [HEY's published sharing path](https://help.hey.com/article/829-share-a-hey-calendar) is a read-only ICS feed, not a verified CalDAV account integration. Voice/Alexa/Claude integration and offline writes are not implemented. Those require separate provider, credential, privacy and product decisions.
+
+
+Recipes support an optional visual instruction document. In the recipe library, add or edit a recipe and choose a UTF-8 HTML file up to 512 KB. Use a self-contained file with inline CSS and embedded images. The in-app viewer disables scripts, forms, and external resources. Replacing or removing the attachment takes effect when saving the recipe. Planned meals retain their own copy.
+
+Apply migration 013 after 012 before deploying HTML instruction support. It adds nullable HTML and filename columns to recipes and meal plans, plus a family-scoped function that copies saved recipes into meal plans atomically. Existing rows require no backfill. The production workflow can apply 013 with the HTML migration input and verifies its presence before deployment.

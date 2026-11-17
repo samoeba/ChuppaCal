@@ -1,3 +1,4 @@
+import { MEAL_PLAN_FIELDS } from "@/lib/recipe-html";
 import Link from "next/link";
 import { loadFamily } from "@/lib/load-family";
 import { familyTimeZone, zonedDate } from "@/lib/time-zone";
@@ -21,7 +22,7 @@ export default async function TodayPage() {
     readAllRows<ChoreTemplate>((a,b) => supabase.from("chore_templates").select("*").eq("family_id",family.id).eq("active",true).order("id").range(a,b)),
     readAllRows<ChoreTemplateMember>((a,b) => supabase.from("chore_template_members").select("*").order("template_id").order("member_id").range(a,b)),
     readAllRows<ChoreCompletion>((a,b) => supabase.from("chore_completions").select("*").eq("family_id",family.id).eq("date",today).order("id").range(a,b)),
-    readAllRows<MealPlan>((a,b) => supabase.from("meal_plans").select("*").eq("family_id",family.id).eq("date",today).order("id").range(a,b)),
+    readAllRows<MealPlan>((a,b) => supabase.from("meal_plans").select(MEAL_PLAN_FIELDS).eq("family_id",family.id).eq("date",today).order("id").range(a,b)),
     supabase.from("calendar_connections").select("last_synced_at,last_sync_error").eq("family_id",family.id),
   ]);
   if (connections.error) throw new Error("Could not load calendar status");

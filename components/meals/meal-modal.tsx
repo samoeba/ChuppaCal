@@ -2,9 +2,10 @@
 
 import { useRef, useState } from "react";
 import type { List, MealPlan, MealRecipe, MealSlot } from "@/lib/types";
-import { setMeal, deleteMeal, mealToGrocery } from "@/app/actions/meals";
+import { setMeal, planSavedRecipe, deleteMeal, mealToGrocery } from "@/app/actions/meals";
 import { createClient } from "@/lib/supabase/client";
 import { useDialog } from "@/lib/use-dialog";
+import RecipeHtmlInstructions from "./recipe-html-instructions";
 import RecipePicker from "./recipe-picker";
 
 const FOOD_EMOJIS = [
@@ -65,10 +66,7 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
     setError(null);
     try {
       const saved = useSavedRecipe && selectedRecipe
-        ? await setMeal(
-          familyId, date, slot, selectedRecipe.name, selectedRecipe.emoji,
-          selectedRecipe.recipe_url ?? "", selectedRecipe.ingredients, false, selectedRecipe.instructions ?? "",
-        )
+        ? await planSavedRecipe(familyId, selectedRecipe.id, date, slot)
         : await setMeal(familyId, date, slot, name.trim(), emoji, recipeUrl, ingredientLines(), recipes !== null && saveRecipe, recipes === null ? undefined : instructions);
       onSave(saved);
     } catch (e) {
@@ -193,6 +191,7 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
             {recipes !== null && <label className="block text-sm mb-3">Instructions (optional)
               <textarea rows={4} maxLength={20000} value={instructions} onChange={(e) => setInstructions(e.target.value)} className="w-full rounded-xl border border-cc-line px-3 py-2 mt-1" />
             </label>}
+            {meal?.instructions_html_name && <RecipeHtmlInstructions id={meal.id} source="meal" name={meal.instructions_html_name} />}
             {meal && ingredientLines().length > 0 && JSON.stringify(ingredientLines()) === JSON.stringify(meal.ingredients ?? []) && <button disabled={saving} onClick={chooseList} className="min-h-11 px-3 bg-cc-cream rounded-xl mb-3">Add ingredients to a list…</button>}
             {meal && JSON.stringify(ingredientLines()) !== JSON.stringify(meal.ingredients ?? []) && ingredientLines().length > 0 && <p className="text-sm mb-3">Save ingredient changes before adding them to a list.</p>}
             {!meal && ingredientLines().length > 0 && <p className="text-sm mb-3">Save this meal first, then reopen it to add ingredients to a list.</p>}

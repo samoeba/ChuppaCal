@@ -34,6 +34,14 @@ select public.cc_test_assert((select instructions='Simmer.' from public.meal_pla
 select public.cc_test_reject($q$select public.cc_set_meal_and_recipe('2026-09-20', 'dinner', 'Chili', null, null, array['Peppers'], repeat('x', 20001))$q$, 'meal_plans_instructions_check');
 select public.cc_test_assert((select ingredients=array['Beans'] from public.meal_recipes where name='Chili'), 'invalid instructions roll back recipe changes');
 
+update public.meal_recipes set instructions_html='<h1>Simmer</h1>', instructions_html_name='chili.html' where name='Chili';
+select public.cc_plan_saved_recipe((select id from public.meal_recipes where name='Chili'), '2026-09-24', 'dinner');
+update public.meal_recipes set instructions_html=null, instructions_html_name=null where name='Chili';
+select public.cc_test_assert((select instructions_html='<h1>Simmer</h1>' and instructions_html_name='chili.html' and ingredients=array['Beans'] from public.meal_plans where date='2026-09-24'), 'planned visual instructions survive replacement or removal from the library');
+select public.cc_test_reject($q$update public.meal_recipes set instructions_html='<p>Incomplete</p>' where name='Chili'$q$, 'meal_recipes_html_check');
+select public.cc_test_reject($q$update public.meal_recipes set instructions_html=repeat('x',524289), instructions_html_name='big.html' where name='Chili'$q$, 'meal_recipes_html_check');
+select public.cc_test_reject($q$select public.cc_plan_saved_recipe('ffffffff-ffff-ffff-ffff-ffffffffffff', '2026-09-24', 'dinner')$q$, 'unavailable in your family');
+
 select public.cc_test_reject($q$insert into public.meal_recipes (family_id, name) values ('20000000-0000-0000-0000-000000000002', 'Other family')$q$, 'row-level security');
 set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000002';
 select public.cc_test_assert((select count(*)=1 from public.meal_recipes where ingredients=array['Peppers']), 'another family keeps its own recipe with the same name');
@@ -41,5 +49,7 @@ select public.cc_test_assert((select count(*)=1 from public.meal_recipes where i
 select public.cc_test_assert(not exists (select 1 from public.meal_recipes where name='Soup'), 'another family cannot see unscheduled recipes');
 with changed as (update public.meal_recipes set instructions='Outside edit' where name='Soup' returning id)
 select public.cc_test_assert(not exists (select 1 from changed), 'another family cannot edit unscheduled recipes');
+
+select public.cc_test_assert(not exists (select 1 from public.meal_plans where instructions_html_name='chili.html'), 'planned HTML is private to its family');
 
 rollback;

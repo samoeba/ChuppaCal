@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { saveMealRecipe } from "@/app/actions/meals";
 import type { MealRecipe } from "@/lib/types";
+import { RECIPE_HTML_MAX_BYTES } from "@/lib/recipe-html";
 import { useDialog } from "@/lib/use-dialog";
 import RecipePicker from "./recipe-picker";
 
@@ -18,6 +19,8 @@ export default function RecipeLibrary({ recipes, familyId, onSave, onClose }: {
 }) {
   const [selectedId, setSelectedId] = useState("");
   const [draft, setDraft] = useState<MealRecipe | null>(null);
+  const [htmlFile, setHtmlFile] = useState<File | null>(null);
+  const [removeHtml, setRemoveHtml] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const dialog = useDialog(true, saving ? undefined : onClose);
@@ -27,6 +30,9 @@ export default function RecipeLibrary({ recipes, familyId, onSave, onClose }: {
     event.preventDefault();
     if (!draft || saving) return;
     const fields = new FormData(event.currentTarget);
+    const attachment = new FormData();
+    if (htmlFile) attachment.set("html", htmlFile);
+    if (removeHtml) attachment.set("removeHtml", "true");
     setSaving(true);
     setError("");
     try {
@@ -36,10 +42,12 @@ export default function RecipeLibrary({ recipes, familyId, onSave, onClose }: {
         recipe_url: String(fields.get("link")),
         ingredients: String(fields.get("ingredients")).split("\n").map((line) => line.trim()).filter(Boolean),
         instructions: String(fields.get("instructions")),
-      });
+      }, attachment);
       onSave(recipe);
       setSelectedId(recipe.id);
       setDraft(null);
+      setHtmlFile(null);
+      setRemoveHtml(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not save recipe");
     } finally {
@@ -80,9 +88,33 @@ export default function RecipeLibrary({ recipes, familyId, onSave, onClose }: {
               <label className="block">Instructions (optional)
                 <textarea name="instructions" rows={5} maxLength={20000} defaultValue={draft.instructions ?? ""} className={fieldClass} />
               </label>
+              <div>
+                <label className="block">Visual instructions (HTML file)
+                  <input type="file" accept=".html,.htm,text/html" className="mt-2 block max-w-full text-sm file:mr-3 file:min-h-11 file:rounded-xl file:border-0 file:bg-sky-soft file:px-4 file:text-sky-deep"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      if (file && (!/\.html?$/i.test(file.name) || file.size === 0 || file.size > RECIPE_HTML_MAX_BYTES)) {
+                        setError("Choose an HTML file up to 512 KB");
+                        event.target.value = "";
+                        setHtmlFile(null);
+                        return;
+                      }
+                      setHtmlFile(file);
+                      setRemoveHtml(false);
+                      setError("");
+                    }} />
+                </label>
+                <p className="mt-2 text-cc-ink-dim">One self-contained HTML file, up to 512 KB. Include styles and images in the file. Scripts and external files are disabled in the viewer.</p>
+                {draft.instructions_html_name && !htmlFile && (
+                  <label className="mt-2 flex min-h-11 items-center gap-2">
+                    <input type="checkbox" checked={removeHtml} onChange={(event) => setRemoveHtml(event.target.checked)} />
+                    Remove {draft.instructions_html_name}
+                  </label>
+                )}
+              </div>
               {error && <p role="alert" className="text-red-700">{error}</p>}
               <div className="flex flex-wrap gap-2">
-                <button type="button" className={secondaryClass} onClick={() => { setDraft(null); setError(""); }}>Cancel</button>
+                <button type="button" className={secondaryClass} onClick={() => { setDraft(null); setHtmlFile(null); setRemoveHtml(false); setError(""); }}>Cancel</button>
                 <button type="submit" className={primaryClass}>{saving ? "Saving…" : "Save recipe"}</button>
               </div>
             </fieldset>

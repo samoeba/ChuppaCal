@@ -7,10 +7,10 @@ import StarRewardsSection from "@/components/settings/star-rewards-section";
 import type { List, ListItem, MealPlan, MealRecipe } from "@/lib/types";
 
 const actions = vi.hoisted(() => ({ clear: vi.fn(), remove: vi.fn(), edit: vi.fn(), seed: vi.fn(), reward: vi.fn() }));
-const { setMeal, saveMealRecipe } = vi.hoisted(() => ({ setMeal: vi.fn(), saveMealRecipe: vi.fn() }));
+const { setMeal, planSavedRecipe, saveMealRecipe } = vi.hoisted(() => ({ setMeal: vi.fn(), planSavedRecipe: vi.fn(), saveMealRecipe: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/app/actions/lists", () => ({ clearCompleted: actions.clear, deleteItem: actions.remove, seedDefaultsIfEmpty: actions.seed, toggleItem: vi.fn(), editItem: actions.edit, addItem: vi.fn() }));
-vi.mock("@/app/actions/meals", () => ({ setMeal, saveMealRecipe, deleteMeal: vi.fn(), mealToGrocery: vi.fn() }));
+vi.mock("@/app/actions/meals", () => ({ setMeal, planSavedRecipe, saveMealRecipe, deleteMeal: vi.fn(), mealToGrocery: vi.fn() }));
 vi.mock("@/app/actions/chores", () => ({ createStarReward: actions.reward, updateStarReward: vi.fn(), deleteStarReward: vi.fn() }));
 const list: List = { id: "list", family_id: "family", name: "Groceries", emoji: "🛒", color: "#112233", sort_order: 0, created_at: "" };
 const item: ListItem = { id: "item", family_id: "family", list_id: "list", text: "Milk", checked: false, sort_order: 0, created_at: "" };
@@ -72,7 +72,7 @@ it("defaults to saved recipes and schedules the selected recipe with its ingredi
     { id: "recipe", name: "Pasta", emoji: "🍝", recipe_url: "https://example.com/pasta", ingredients: ["Pasta", "Tomatoes"], instructions: "Boil pasta.\nAdd tomatoes." },
     { id: "tacos", name: "Tacos", emoji: null, recipe_url: null, ingredients: [] },
   ];
-  setMeal.mockResolvedValue({ ...recipes[0], id: "meal", date: "2026-09-21", slot: "dinner" });
+  planSavedRecipe.mockResolvedValue({ ...recipes[0], id: "meal", date: "2026-09-21", slot: "dinner" });
   render(<MealBoard {...mealBoardProps} meals={[]} recipes={recipes} />);
   fireEvent.click(screen.getAllByRole("button", { name: /plan meal/i })[0]);
   const dialog = within(screen.getByRole("dialog"));
@@ -85,7 +85,7 @@ it("defaults to saved recipes and schedules the selected recipe with its ingredi
   expect(dialog.getByText(/Boil pasta/)).toBeTruthy();
   fireEvent.click(dialog.getByRole("button", { name: "Add to plan" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Pasta", "🍝", "https://example.com/pasta", ["Pasta", "Tomatoes"], false, "Boil pasta.\nAdd tomatoes.");
+  expect(planSavedRecipe).toHaveBeenCalledWith("family", "recipe", "2026-09-21", "dinner");
 
   fireEvent.click(screen.getAllByRole("button", { name: /pasta/i })[0]);
   const editor = within(screen.getByRole("dialog"));
@@ -141,21 +141,24 @@ it("creates, views, and edits an unscheduled recipe in the library", async () =>
   fireEvent.change(dialog.getByLabelText("Recipe name"), { target: { value: recipe.name } });
   fireEvent.change(dialog.getByLabelText(/Recipe link/), { target: { value: recipe.recipe_url } });
   fireEvent.change(dialog.getByLabelText(/Ingredients/), { target: { value: "Broth\nBeans" } });
+  const htmlFile = new File(["<h1>Soup</h1>"], "soup.html", { type: "text/html" });
+  fireEvent.change(dialog.getByLabelText("Visual instructions (HTML file)"), { target: { files: [htmlFile] } });
   fireEvent.click(dialog.getByRole("button", { name: "Save recipe" }));
   expect(await dialog.findByText("No instructions saved yet.")).toBeTruthy();
   expect(dialog.getByRole("link", { name: /Open recipe/ }).getAttribute("href")).toBe(recipe.recipe_url);
   expect(dialog.getByText("Beans")).toBeTruthy();
   expect(saveMealRecipe).toHaveBeenNthCalledWith(1, "family", null, {
     name: recipe.name, emoji: null, recipe_url: recipe.recipe_url, ingredients: recipe.ingredients, instructions: "",
-  });
+  }, expect.any(FormData));
 
+  expect(saveMealRecipe.mock.calls[0][3].get("html")).toBe(htmlFile);
   fireEvent.click(dialog.getByRole("button", { name: "Edit recipe" }));
   fireEvent.change(dialog.getByLabelText(/Instructions/), { target: { value: "Heat broth.\nAdd beans." } });
   fireEvent.click(dialog.getByRole("button", { name: "Save recipe" }));
   expect(await dialog.findByText(/Heat broth/)).toBeTruthy();
   expect(saveMealRecipe).toHaveBeenNthCalledWith(2, "family", recipe.id, {
     name: recipe.name, emoji: null, recipe_url: recipe.recipe_url, ingredients: recipe.ingredients, instructions: "Heat broth.\nAdd beans.",
-  });
+  }, expect.any(FormData));
   expect(setMeal).not.toHaveBeenCalled();
   fireEvent.click(dialog.getByRole("button", { name: "Close" }));
   fireEvent.click(screen.getAllByRole("button", { name: /plan meal/i })[0]);

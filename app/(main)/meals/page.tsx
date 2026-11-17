@@ -1,3 +1,4 @@
+import { MEAL_PLAN_FIELDS, MEAL_RECIPE_FIELDS } from "@/lib/recipe-html";
 import MealBoard from "@/components/meals/meal-board";
 import type { MealPlan, MealRecipe, MealSlot } from "@/lib/types";
 import { loadFamily } from "@/lib/load-family";
@@ -26,13 +27,13 @@ export default async function MealsPage({
   const [{ data: meals, error: mealsError }, recipes] = await Promise.all([
     supabase
       .from("meal_plans")
-      .select("*")
+      .select(MEAL_PLAN_FIELDS)
       .eq("family_id", family.id)
       .gte("date", localDateStr(weekStart))
       .lte("date", localDateStr(weekEnd)),
     readAllRows<MealRecipe>(async (from, to) => {
       const result = await supabase.from("meal_recipes")
-        .select("id,name,emoji,recipe_url,ingredients,instructions")
+        .select(MEAL_RECIPE_FIELDS)
         .eq("family_id", family.id)
         .order("name")
         .order("id")
