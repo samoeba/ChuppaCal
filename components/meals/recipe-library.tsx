@@ -93,7 +93,7 @@ export default function RecipeLibrary({ recipes, familyId, onSave, onClose }: {
             <div className="flex flex-wrap gap-2">
               <button className={secondaryClass} onClick={onClose}>Close</button>
               {selectedRecipe && <button className={secondaryClass} onClick={() => setDraft(selectedRecipe)}>Edit recipe</button>}
-              <button className={primaryClass} onClick={() => setDraft({ id: "", name: "", emoji: null, recipe_url: null, ingredients: [] })}>Add recipe</button>
+              <button className="ml-auto min-h-11 rounded-xl bg-clover-deep px-4 py-2 font-semibold text-white active:opacity-80" onClick={() => setDraft({ id: "", name: "", emoji: null, recipe_url: null, ingredients: [] })}>Add recipe</button>
             </div>
           </>
         )}
