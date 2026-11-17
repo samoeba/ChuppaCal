@@ -1,5 +1,5 @@
 /* Only the generic offline shell is cached; authenticated pages and API responses never enter Cache Storage. */
-const CACHE_NAME = "chuppacal-offline-shell-v1";
+const CACHE_NAME = "chuppacal-offline-shell-v2";
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(["/offline.html", "/offline.js"])).then(() => self.skipWaiting()));
 });

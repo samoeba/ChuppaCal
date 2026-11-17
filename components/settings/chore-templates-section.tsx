@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import { useState } from "react";
 import { useDialog } from "@/lib/use-dialog";
 import { createChoreTemplate, updateChoreTemplate, deleteChoreTemplate } from "@/app/actions/chores";
@@ -107,8 +108,8 @@ export default function ChoreTemplatesSection({ templates, kids, familyId, onCha
                   {t.memberIds.length > 0 && <> · {t.memberIds.map((id) => kids.find((k) => k.id === id)?.name).filter(Boolean).join(", ")}</>}
                 </div>
               </div>
-              <button aria-label={`Edit ${t.name}`} onClick={() => openEdit(t)} className="text-slate-400 hover:text-slate-600 min-w-11 min-h-11 p-2 touch-manipulation">✏️</button>
-              <button aria-label={`Remove ${t.name}`} onClick={() => handleDelete(t.id)} className="text-slate-400 hover:text-rose-500 min-w-11 min-h-11 p-2 touch-manipulation">🗑️</button>
+              <button aria-label={`Edit ${t.name}`} onClick={() => openEdit(t)} className="text-slate-400 hover:text-slate-600 min-w-11 min-h-11 p-2 touch-manipulation"><UiIcon name="edit" /></button>
+              <button aria-label={`Remove ${t.name}`} onClick={() => handleDelete(t.id)} className="text-slate-400 hover:text-rose-500 min-w-11 min-h-11 p-2 touch-manipulation"><UiIcon name="trash" /></button>
             </div>
           ))}
         </div>

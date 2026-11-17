@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/today", icon: null, label: "Today" },
+  { href: "/today", icon: "today.svg", label: "Today" },
   { href: "/calendar", icon: "calendar.svg", label: "Calendar" },
   { href: "/chores", icon: "tasks.svg", label: "Chores" },
   { href: "/meals", icon: "meals.svg", label: "Meals" },
@@ -13,15 +13,7 @@ const NAV_ITEMS = [
   { href: "/settings", icon: "settings.svg", label: "Settings" },
 ];
 
-function NavIcon({ icon }: { icon: string | null }) {
-  if (!icon) {
-    return (
-      <span aria-hidden="true" className="flex size-6 items-center justify-center text-xl md:size-9 md:text-3xl">
-        ☀️
-      </span>
-    );
-  }
-
+function NavIcon({ icon }: { icon: string }) {
   return (
     <Image
       src={`/chuppacal-sidebar-icons/${icon}`}

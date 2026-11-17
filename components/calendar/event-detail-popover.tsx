@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import { useEffect, useState } from "react";
 import { type EventWithMember, formatTimeLong } from "@/lib/calendar";
 import { useFamilyRuntime } from "@/components/family-runtime";
@@ -127,7 +128,7 @@ export default function EventDetailPopover({
 
         {event.location && (
           <div className="mt-4 flex items-start gap-2 text-body">
-            <span aria-hidden="true">📍</span>
+            <UiIcon name="location" />
             <span className="break-words">{event.location}</span>
           </div>
         )}

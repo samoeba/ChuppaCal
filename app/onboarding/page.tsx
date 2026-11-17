@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -234,7 +235,7 @@ function OnboardingContent() {
         {/* Step: PIN */}
         {step === "pin" && (
           <div className="text-center">
-            <div className="text-5xl mb-4">🔒</div>
+            <div className="text-5xl mb-4"><UiIcon name="lock" /></div>
             <h2 className="text-2xl font-bold text-white mb-2">
               Set a parental PIN
             </h2>

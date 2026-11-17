@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import Image from "next/image";
 import MemberAvatar from "@/components/family/member-avatar";
 import type { ChoreCompletion, ChoreTemplate, FamilyMember } from "@/lib/types";
@@ -53,7 +54,7 @@ export default function JobRow({ job, kids, gateByKid, claim, onOpen, onLongPres
               {!gateByKid[kid.id] && (
                 <div className="absolute inset-0 rounded-full flex items-center justify-center text-xs"
                      style={{ background: "#1C1A1499" }}>
-                  🔒
+                  <UiIcon name="lock" />
                 </div>
               )}
             </div>

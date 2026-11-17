@@ -6,6 +6,7 @@ import {
 export type GoogleCalendarListItem = {
   id: string;
   summary: string;
+  summaryOverride?: string;
   primary?: boolean;
   backgroundColor?: string;
 };
@@ -39,7 +40,7 @@ export async function listCalendars(
   creds: StoredGoogleCredentials
 ): Promise<{ items: GoogleCalendarListItem[]; updatedCreds: StoredGoogleCredentials | null }> {
   const { items, updatedCreds } = await googlePages<GoogleCalendarListItem>(
-    "https://www.googleapis.com/calendar/v3/users/me/calendarList", creds,
+    "https://www.googleapis.com/calendar/v3/users/me/calendarList?showHidden=true&minAccessRole=reader", creds,
   );
   return { items, updatedCreds };
 }

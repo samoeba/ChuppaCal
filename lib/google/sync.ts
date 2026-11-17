@@ -1,9 +1,22 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import type { createServiceClient } from "@/lib/supabase/server";
 import { eventToDbRow, listEvents } from "@/lib/google/calendar";
 import type { StoredGoogleCredentials } from "@/lib/google/oauth";
 import type { CalendarConnection } from "@/lib/types";
 
 export type SyncResult = { connection_id: string; events_upserted?: number; skipped?: boolean; error?: string };
+
+export async function syncGoogleConnections(svc: ReturnType<typeof createServiceClient>, ids: string[], deadline: number) {
+  let next = 0;
+  const results: SyncResult[] = [];
+  async function worker() {
+    while (next < ids.length && deadline - Date.now() > 5_000) {
+      const id = ids[next++];
+      results.push(await syncGoogleConnection(svc, id, AbortSignal.timeout(Math.max(1, deadline - Date.now()))));
+    }
+  }
+  await Promise.all([worker(), worker()]);
+  return { results, deferred: ids.length - next };
+}
 
 export async function syncGoogleConnection(svc: ReturnType<typeof createServiceClient>, id: string, signal = AbortSignal.timeout(45_000)): Promise<SyncResult> {
   const { data, error } = await svc.rpc("cc_claim_calendar_sync", { p_id: id });

@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -396,7 +397,7 @@ export default function SettingsPage() {
                       member.chores_enabled ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400"
                     }`}
                   >
-                    {member.chores_enabled ? "✅ Chores on" : "Chores off"}
+                    {member.chores_enabled ? "Chores on" : "Chores off"}
                   </button>
                 )}
                 <div
@@ -408,7 +409,7 @@ export default function SettingsPage() {
                   aria-label={`Edit ${member.name}`}
                   className="text-slate-400 hover:text-slate-600 p-2 touch-manipulation"
                 >
-                  ✏️
+                  <UiIcon name="edit" />
                 </button>
                 {!member.user_id && (
                   <button
@@ -416,7 +417,7 @@ export default function SettingsPage() {
                     aria-label={`Remove ${member.name}`}
                     className="text-slate-400 hover:text-rose-500 p-2 touch-manipulation"
                   >
-                    🗑️
+                    <UiIcon name="trash" />
                   </button>
                 )}
               </div>
@@ -430,8 +431,8 @@ export default function SettingsPage() {
             <h2 className="text-lg font-semibold text-slate-900">Calendar Connections</h2>
           </div>
           <p className="text-sm text-slate-400 mb-4">
-            Link Google Calendar accounts. Events sync approximately every 5 minutes and
-            appear color-coded by the assigned family member.
+            Use Add calendars on a connection to show more calendars from the same Google account.
+            Events are color-coded by the assigned family member.
           </p>
 
           {connections.length === 0 ? (
@@ -475,7 +476,7 @@ export default function SettingsPage() {
                       aria-label={`Disconnect ${conn.calendar_name || conn.provider}`}
                       className="text-slate-400 hover:text-rose-500 p-2 touch-manipulation"
                     >
-                      🗑️
+                      <UiIcon name="trash" />
                     </button>
                     <CalendarConnectionControls connection={conn} onChanged={loadData} />
                   </div>
@@ -562,7 +563,7 @@ export default function SettingsPage() {
             onClick={copyInviteLink}
             className="w-full bg-slate-100 text-slate-700 px-4 py-3 rounded-xl text-sm font-semibold active:bg-slate-200 transition-colors touch-manipulation"
           >
-            📋 Copy Invite Link
+            <UiIcon name="copy" /> Copy Invite Link
           </button>
         </section>
 

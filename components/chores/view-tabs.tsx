@@ -1,5 +1,7 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
+
 export type ChoresView = "today" | "jobs" | "week" | "rewards";
 
 const TABS: { id: ChoresView; label: string }[] = [
@@ -32,7 +34,7 @@ export default function ViewTabs({ view, onChange, allLocked }: ViewTabsProps) {
                 : { background: "#FAF6E8", color: "#1C1A14B3" }
             }
           >
-            {locked ? "🔒 " : ""}
+            {locked && <><UiIcon name="lock" /> <span className="sr-only">Locked </span></>}
             {tab.label}
           </button>
         );

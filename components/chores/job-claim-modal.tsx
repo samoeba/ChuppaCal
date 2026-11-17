@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import MemberAvatar from "@/components/family/member-avatar";
 import type { ChoreTemplate, FamilyMember } from "@/lib/types";
 import { useDialog } from "@/lib/use-dialog";
@@ -47,7 +48,7 @@ export default function JobClaimModal({ job, kids, gateByKid, onPick, onCancel }
                   {!open && (
                     <div className="absolute inset-0 rounded-full flex items-center justify-center text-2xl"
                          style={{ background: "#1C1A1499" }}>
-                      🔒
+                      <UiIcon name="lock" />
                     </div>
                   )}
                 </div>

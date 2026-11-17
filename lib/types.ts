@@ -55,6 +55,9 @@ export interface CalendarConnection {
 
 export type CalendarConnectionSummary = Omit<CalendarConnection, "credentials">;
 
+export type GoogleCalendarChoice = { id: string; name: string; primary: boolean; connected: boolean };
+export const MAX_GOOGLE_CALENDARS_PER_ADD = 250;
+
 export interface CalendarEvent {
   id: string;
   family_id: string;

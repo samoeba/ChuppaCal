@@ -30,6 +30,9 @@ describe("Google import", () => {
     fetchMock.mockImplementation(async () => response({ items: [], nextPageToken: "loop" }));
     await expect(listCalendars(creds)).rejects.toThrow("repeated page token");
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    const nextPage = new URL(fetchMock.mock.calls[1][0]).searchParams;
+    expect(nextPage.get("showHidden")).toBe("true");
+    expect(nextPage.get("minAccessRole")).toBe("reader");
   });
   it("does not include Google response bodies in errors", async () => {
     fetchMock.mockResolvedValue(new Response("sensitive-response", { status: 403 }));

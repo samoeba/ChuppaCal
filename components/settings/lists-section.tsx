@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import { useState, useTransition } from "react";
 import type { List } from "@/lib/types";
 import ListEditModal from "./list-edit-modal";
@@ -79,14 +80,14 @@ export default function ListsSection({ initialLists }: Props) {
               className="text-slate-400 hover:text-slate-600 p-2 touch-manipulation"
               aria-label={`Edit ${list.name}`}
             >
-              ✏️
+              <UiIcon name="edit" />
             </button>
             <button
               onClick={() => handleDelete(list)}
               className="text-slate-400 hover:text-rose-500 p-2 touch-manipulation"
               aria-label={`Delete ${list.name}`}
             >
-              🗑️
+              <UiIcon name="trash" />
             </button>
           </div>
         ))}

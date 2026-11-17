@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import { useState } from "react";
 import { useDialog } from "@/lib/use-dialog";
 import { createStarReward, updateStarReward, deleteStarReward } from "@/app/actions/chores";
@@ -66,8 +67,8 @@ export default function StarRewardsSection({ rewards, familyId, onChanged }: Pro
                 <div className="font-semibold text-slate-900">{r.name}</div>
                 <div className="text-xs text-slate-400">{r.star_cost} stars</div>
               </div>
-              <button aria-label={`Edit ${r.name}`} disabled={saving} onClick={() => openEdit(r)} className="text-slate-400 hover:text-slate-600 min-w-11 min-h-11 p-2 touch-manipulation">✏️</button>
-              <button aria-label={`Delete ${r.name}`} disabled={saving} onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500 min-w-11 min-h-11 p-2 touch-manipulation">🗑️</button>
+              <button aria-label={`Edit ${r.name}`} disabled={saving} onClick={() => openEdit(r)} className="text-slate-400 hover:text-slate-600 min-w-11 min-h-11 p-2 touch-manipulation"><UiIcon name="edit" /></button>
+              <button aria-label={`Delete ${r.name}`} disabled={saving} onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-rose-500 min-w-11 min-h-11 p-2 touch-manipulation"><UiIcon name="trash" /></button>
             </div>
           ))}
         </div>

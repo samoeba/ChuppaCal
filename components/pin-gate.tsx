@@ -1,5 +1,6 @@
 "use client";
 
+import UiIcon from "@/components/ui-icon";
 import { useState, useCallback } from "react";
 import { useDialog } from "@/lib/use-dialog";
 
@@ -66,7 +67,7 @@ export default function PinGate({
   return (
     <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center z-50">
       <div ref={dialog} role="dialog" aria-modal="true" aria-label={message} tabIndex={-1} className="text-center">
-        <div className="text-4xl mb-4">🔒</div>
+        <div className="text-4xl mb-4"><UiIcon name="lock" /></div>
         <p className="text-slate-300 mb-6 text-lg">{message}</p>
         {!/^\d{4}$/.test(familyPin) && <p role="alert" className="text-rose-300 mb-4">A parental PIN has not been configured. Ask the family owner to restore it.</p>}
 
