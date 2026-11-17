@@ -24,7 +24,7 @@ The intended IANA timezone defaults to `America/Chicago` until the household sel
 
 1. Use Node.js 22.20+; run `npm ci --ignore-scripts`.
 2. Copy `.env.example` to `.env.local` and enter **development** Supabase/Google credentials. Never commit real credentials. The service-role key is server-only and bypasses RLS.
-3. Use a separate Supabase development project. Apply `supabase/migrations/001`–`011` in filename order to a new empty project. **Never replay 003 against live data:** it drops the old chore-assignment model. The existing live project already has 005–009; do not replay them or assume the dashboard recorded CLI migration history. Apply 010 once to enable the private screensaver album. Apply 011 before deploying the recipe bank.
+3. Use a separate Supabase development project. Apply `supabase/migrations/001`–`012` in filename order to a new empty project. **Never replay 003 against live data:** it drops the old chore-assignment model. The existing live project already has 005–009; do not replay them or assume the dashboard recorded CLI migration history. Apply 010 once to enable the private screensaver album. Apply 011 and then 012 before deploying the recipe library. The production workflow checks both and can apply either if it is pending. Migration 012 adds nullable instructions without a backfill. Check the target schema and migration history before applying pending files manually.
 4. Configure Google sign-in in Supabase Auth and the separate Calendar OAuth callback (`/api/calendar/google/callback`) for each intended origin. The login account and connected calendar account can differ.
 5. Run `npm run dev` and open `http://localhost:3000`. Create a test family, add children, connect a test calendar, and try chores, meals, and lists.
 

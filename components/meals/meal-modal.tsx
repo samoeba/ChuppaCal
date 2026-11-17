@@ -39,6 +39,7 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
   const [emoji, setEmoji] = useState<string | null>(meal?.emoji ?? null);
   const [saving, setSaving] = useState(false);
   const [recipeUrl, setRecipeUrl] = useState(meal?.recipe_url ?? "");
+  const [instructions, setInstructions] = useState(meal?.instructions ?? "");
   const [ingredients, setIngredients] = useState((meal?.ingredients ?? []).join("\n"));
   const [lists, setLists] = useState<List[] | null>(null);
   const [listId, setListId] = useState("");
@@ -66,9 +67,9 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
       const saved = useSavedRecipe && selectedRecipe
         ? await setMeal(
           familyId, date, slot, selectedRecipe.name, selectedRecipe.emoji,
-          selectedRecipe.recipe_url ?? "", selectedRecipe.ingredients,
+          selectedRecipe.recipe_url ?? "", selectedRecipe.ingredients, false, selectedRecipe.instructions ?? "",
         )
-        : await setMeal(familyId, date, slot, name.trim(), emoji, recipeUrl, ingredientLines(), recipes !== null && saveRecipe);
+        : await setMeal(familyId, date, slot, name.trim(), emoji, recipeUrl, ingredientLines(), recipes !== null && saveRecipe, recipes === null ? undefined : instructions);
       onSave(saved);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
@@ -189,6 +190,9 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
             <label className="block text-sm mb-3">Recipe link (optional)<input type="url" value={recipeUrl} onChange={(e) => setRecipeUrl(e.target.value)} placeholder="https://…" className="w-full min-h-11 rounded-xl border border-cc-line px-3 mt-1" /></label>
             {/^https?:\/\//.test(recipeUrl) && <a href={recipeUrl} target="_blank" rel="noopener noreferrer" className="inline-block underline text-sm mb-3 min-h-11">Open recipe ↗</a>}
             <label className="block text-sm mb-3">Ingredients · one per line<textarea rows={4} value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder={"1 box pasta\n2 tomatoes"} className="w-full rounded-xl border border-cc-line px-3 py-2 mt-1" /></label>
+            {recipes !== null && <label className="block text-sm mb-3">Instructions (optional)
+              <textarea rows={4} maxLength={20000} value={instructions} onChange={(e) => setInstructions(e.target.value)} className="w-full rounded-xl border border-cc-line px-3 py-2 mt-1" />
+            </label>}
             {meal && ingredientLines().length > 0 && JSON.stringify(ingredientLines()) === JSON.stringify(meal.ingredients ?? []) && <button disabled={saving} onClick={chooseList} className="min-h-11 px-3 bg-cc-cream rounded-xl mb-3">Add ingredients to a list…</button>}
             {meal && JSON.stringify(ingredientLines()) !== JSON.stringify(meal.ingredients ?? []) && ingredientLines().length > 0 && <p className="text-sm mb-3">Save ingredient changes before adding them to a list.</p>}
             {!meal && ingredientLines().length > 0 && <p className="text-sm mb-3">Save this meal first, then reopen it to add ingredients to a list.</p>}
@@ -196,12 +200,10 @@ export default function MealModal({ date, slot, meal, recipes, familyId, onSave,
               <p className="text-sm mb-2">Add these {ingredientLines().length} ingredients. Exact duplicates already unchecked on the list will be skipped.</p>
               {lists.length ? <><select aria-label="Destination grocery list" value={listId} onChange={(e) => setListId(e.target.value)} className="w-full min-h-11 border rounded-lg px-2">{lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}</select><button disabled={saving} onClick={addIngredients} className="min-h-11 px-3 underline">Confirm add</button></> : <p>Create a list on the Lists page first.</p>}
             </div>}
-            {recipes !== null && (
-              <label className="mb-3 flex min-h-11 items-center gap-3 rounded-xl bg-cc-cream px-3 py-2 text-sm font-semibold">
-                <input type="checkbox" checked={saveRecipe} onChange={(event) => setSaveRecipe(event.target.checked)} className="size-5 shrink-0 accent-sky" />
-                {matchesRecipeName ? "Update recipe in the recipe bank" : "Save to recipe bank"}
-              </label>
-            )}
+            {recipes !== null && <label className="mb-3 flex min-h-11 items-center gap-3 rounded-xl bg-cc-cream px-3 py-2 text-sm font-semibold">
+              <input type="checkbox" checked={saveRecipe} onChange={(event) => setSaveRecipe(event.target.checked)} className="size-5 shrink-0 accent-sky" />
+              {matchesRecipeName ? "Update recipe in the library" : "Save to recipe library"}
+            </label>}
           </fieldset>
         )}
         <p role="status" className="text-sm mb-3">{notice}</p>

@@ -6,6 +6,7 @@ import type { MealPlan, MealRecipe, MealSlot } from "@/lib/types";
 import WeekNav from "./week-nav";
 import MealGrid from "./meal-grid";
 import MealModal from "./meal-modal";
+import RecipeLibrary from "./recipe-library";
 import { useServerState } from "@/lib/use-server-state";
 import { useFamilyRuntime } from "@/components/family-runtime";
 import { civilDate } from "@/lib/time-zone";
@@ -37,6 +38,8 @@ export default function MealBoard({ meals, recipes, mealSlots, familyId, weekSta
   const { timeZone } = useFamilyRuntime();
   const router = useRouter();
   const [optMeals, setOptMeals] = useServerState(meals);
+  const [savedRecipes, setSavedRecipes] = useServerState(recipes);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
 
   const weekDays = getWeekDays(weekStartStr);
@@ -71,6 +74,21 @@ export default function MealBoard({ meals, recipes, mealSlots, familyId, weekSta
 
   return (
     <div className="flex flex-col h-full">
+      {savedRecipes !== null && <div className="flex justify-end px-4 pt-3">
+        <button onClick={() => setLibraryOpen(true)} className="min-h-11 rounded-xl bg-cc-cream px-4 font-semibold text-cc-ink">
+          Recipe library
+        </button>
+      </div>}
+      {libraryOpen && savedRecipes !== null && (
+        <RecipeLibrary
+          recipes={savedRecipes}
+          familyId={familyId}
+          onSave={(recipe) => setSavedRecipes((current) =>
+            [...(current ?? []).filter(({ id }) => id !== recipe.id), recipe].sort((a, b) => a.name.localeCompare(b.name))
+          )}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
       <WeekNav
         weekStartStr={weekStartStr}
         onPrev={() => navigate(-1)}
@@ -89,7 +107,7 @@ export default function MealBoard({ meals, recipes, mealSlots, familyId, weekSta
           date={selectedCell.date}
           slot={selectedCell.slot}
           meal={selectedCell.meal}
-          recipes={recipes}
+          recipes={savedRecipes}
           familyId={familyId}
           onSave={handleSave}
           onDelete={handleDelete}

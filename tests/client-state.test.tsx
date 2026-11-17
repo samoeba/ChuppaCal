@@ -7,10 +7,10 @@ import StarRewardsSection from "@/components/settings/star-rewards-section";
 import type { List, ListItem, MealPlan, MealRecipe } from "@/lib/types";
 
 const actions = vi.hoisted(() => ({ clear: vi.fn(), remove: vi.fn(), edit: vi.fn(), seed: vi.fn(), reward: vi.fn() }));
-const setMeal = vi.hoisted(() => vi.fn());
+const { setMeal, saveMealRecipe } = vi.hoisted(() => ({ setMeal: vi.fn(), saveMealRecipe: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/app/actions/lists", () => ({ clearCompleted: actions.clear, deleteItem: actions.remove, seedDefaultsIfEmpty: actions.seed, toggleItem: vi.fn(), editItem: actions.edit, addItem: vi.fn() }));
-vi.mock("@/app/actions/meals", () => ({ setMeal, deleteMeal: vi.fn(), mealToGrocery: vi.fn() }));
+vi.mock("@/app/actions/meals", () => ({ setMeal, saveMealRecipe, deleteMeal: vi.fn(), mealToGrocery: vi.fn() }));
 vi.mock("@/app/actions/chores", () => ({ createStarReward: actions.reward, updateStarReward: vi.fn(), deleteStarReward: vi.fn() }));
 const list: List = { id: "list", family_id: "family", name: "Groceries", emoji: "🛒", color: "#112233", sort_order: 0, created_at: "" };
 const item: ListItem = { id: "item", family_id: "family", list_id: "list", text: "Milk", checked: false, sort_order: 0, created_at: "" };
@@ -67,9 +67,9 @@ it("adopts refreshed meals instead of retaining the previous server snapshot", (
   expect(screen.queryByText("Pasta")).toBeNull();
   expect(screen.getAllByText("Tacos")).toHaveLength(2);
 });
-it("defaults to saved recipes and schedules the selected recipe with its ingredients", async () => {
+it("defaults to saved recipes and schedules the selected recipe with its ingredients, link, and instructions", async () => {
   const recipes: MealRecipe[] = [
-    { id: "recipe", name: "Pasta", emoji: "🍝", recipe_url: "https://example.com/pasta", ingredients: ["Pasta", "Tomatoes"] },
+    { id: "recipe", name: "Pasta", emoji: "🍝", recipe_url: "https://example.com/pasta", ingredients: ["Pasta", "Tomatoes"], instructions: "Boil pasta.\nAdd tomatoes." },
     { id: "tacos", name: "Tacos", emoji: null, recipe_url: null, ingredients: [] },
   ];
   setMeal.mockResolvedValue({ ...recipes[0], id: "meal", date: "2026-09-21", slot: "dinner" });
@@ -82,13 +82,15 @@ it("defaults to saved recipes and schedules the selected recipe with its ingredi
   expect(dialog.queryByRole("radio", { name: "Tacos" })).toBeNull();
   fireEvent.click(dialog.getByRole("radio", { name: "Pasta" }));
   expect(dialog.getByText("Tomatoes")).toBeTruthy();
+  expect(dialog.getByText(/Boil pasta/)).toBeTruthy();
   fireEvent.click(dialog.getByRole("button", { name: "Add to plan" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Pasta", "🍝", "https://example.com/pasta", ["Pasta", "Tomatoes"]);
+  expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Pasta", "🍝", "https://example.com/pasta", ["Pasta", "Tomatoes"], false, "Boil pasta.\nAdd tomatoes.");
 
   fireEvent.click(screen.getAllByRole("button", { name: /pasta/i })[0]);
   const editor = within(screen.getByRole("dialog"));
   expect((editor.getByRole("textbox", { name: /ingredients/i }) as HTMLTextAreaElement).value).toBe("Pasta\nTomatoes");
+  expect((editor.getByRole("textbox", { name: /instructions/i }) as HTMLTextAreaElement).value).toBe("Boil pasta.\nAdd tomatoes.");
   expect(editor.getByRole("button", { name: /add ingredients to a list/i })).toBeTruthy();
 });
 it.each([false, true])("supports a custom meal with recipe saving set to %s", async (saveRecipe) => {
@@ -96,14 +98,14 @@ it.each([false, true])("supports a custom meal with recipe saving set to %s", as
   render(<MealBoard {...mealBoardProps} meals={[]} recipes={[]} />);
   fireEvent.click(screen.getAllByRole("button", { name: /plan meal/i })[0]);
   const dialog = within(screen.getByRole("dialog"));
-  expect(dialog.getByText(/your recipe bank is empty/i)).toBeTruthy();
+  expect(dialog.getByText(/your recipe library is empty/i)).toBeTruthy();
   fireEvent.click(dialog.getByRole("button", { name: "Custom meal" }));
   fireEvent.change(dialog.getByRole("textbox", { name: "Meal name" }), { target: { value: "Soup" } });
   fireEvent.change(dialog.getByRole("textbox", { name: /ingredients/i }), { target: { value: "Broth\nBeans" } });
-  if (saveRecipe) fireEvent.click(dialog.getByRole("checkbox", { name: "Save to recipe bank" }));
+  if (saveRecipe) fireEvent.click(dialog.getByRole("checkbox", { name: "Save to recipe library" }));
   fireEvent.click(dialog.getByRole("button", { name: "Save meal" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Soup", null, "", ["Broth", "Beans"], saveRecipe);
+  expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Soup", null, "", ["Broth", "Beans"], saveRecipe, "");
 });
 it("keeps custom meal planning available while the recipe migration is pending", async () => {
   setMeal.mockResolvedValue({ id: "meal", date: "2026-09-21", slot: "dinner", name: "Soup" });
@@ -111,10 +113,10 @@ it("keeps custom meal planning available while the recipe migration is pending",
   fireEvent.click(screen.getAllByRole("button", { name: /plan meal/i })[0]);
   const dialog = within(screen.getByRole("dialog"));
   fireEvent.change(dialog.getByRole("textbox", { name: "Meal name" }), { target: { value: "Soup" } });
-  expect(dialog.queryByRole("checkbox", { name: "Save to recipe bank" })).toBeNull();
+  expect(dialog.queryByRole("checkbox", { name: "Save to recipe library" })).toBeNull();
   fireEvent.click(dialog.getByRole("button", { name: "Save meal" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Soup", null, "", [], false);
+  expect(setMeal).toHaveBeenCalledWith("family", "2026-09-21", "dinner", "Soup", null, "", [], false, undefined);
 });
 it("keeps reward form data and displays server failures", async () => {
   actions.reward.mockRejectedValue(new Error("Save failed"));
@@ -124,4 +126,39 @@ it("keeps reward form data and displays server failures", async () => {
   fireEvent.click(screen.getByRole("button", { name: /^Add$/ }));
   await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("Save failed"));
   expect((screen.getByRole("textbox", { name: "Reward name" }) as HTMLInputElement).value).toBe("Ice cream");
+});
+
+it("creates, views, and edits an unscheduled recipe in the library", async () => {
+  const recipe = {
+    id: "recipe", name: "Soup", emoji: null, recipe_url: "https://example.com/soup",
+    ingredients: ["Broth", "Beans"], instructions: null,
+  };
+  saveMealRecipe.mockResolvedValueOnce(recipe).mockResolvedValueOnce({ ...recipe, instructions: "Heat broth.\nAdd beans." });
+  render(<MealBoard {...mealBoardProps} meals={[]} recipes={[]} />);
+  fireEvent.click(screen.getByRole("button", { name: "Recipe library" }));
+  const dialog = within(screen.getByRole("dialog"));
+  fireEvent.click(dialog.getByRole("button", { name: "Add recipe" }));
+  fireEvent.change(dialog.getByLabelText("Recipe name"), { target: { value: recipe.name } });
+  fireEvent.change(dialog.getByLabelText(/Recipe link/), { target: { value: recipe.recipe_url } });
+  fireEvent.change(dialog.getByLabelText(/Ingredients/), { target: { value: "Broth\nBeans" } });
+  fireEvent.click(dialog.getByRole("button", { name: "Save recipe" }));
+  expect(await dialog.findByText("No instructions saved yet.")).toBeTruthy();
+  expect(dialog.getByRole("link", { name: /Open recipe/ }).getAttribute("href")).toBe(recipe.recipe_url);
+  expect(dialog.getByText("Beans")).toBeTruthy();
+  expect(saveMealRecipe).toHaveBeenNthCalledWith(1, "family", null, {
+    name: recipe.name, emoji: null, recipe_url: recipe.recipe_url, ingredients: recipe.ingredients, instructions: "",
+  });
+
+  fireEvent.click(dialog.getByRole("button", { name: "Edit recipe" }));
+  fireEvent.change(dialog.getByLabelText(/Instructions/), { target: { value: "Heat broth.\nAdd beans." } });
+  fireEvent.click(dialog.getByRole("button", { name: "Save recipe" }));
+  expect(await dialog.findByText(/Heat broth/)).toBeTruthy();
+  expect(saveMealRecipe).toHaveBeenNthCalledWith(2, "family", recipe.id, {
+    name: recipe.name, emoji: null, recipe_url: recipe.recipe_url, ingredients: recipe.ingredients, instructions: "Heat broth.\nAdd beans.",
+  });
+  expect(setMeal).not.toHaveBeenCalled();
+  fireEvent.click(dialog.getByRole("button", { name: "Close" }));
+  fireEvent.click(screen.getAllByRole("button", { name: /plan meal/i })[0]);
+  fireEvent.click(dialog.getByRole("radio", { name: "Soup" }));
+  expect(dialog.getByText(/Heat broth/)).toBeTruthy();
 });

@@ -131,6 +131,7 @@ export interface MealPlan {
   name: string;
   emoji: string | null;
   recipe_url?: string | null;
+  instructions?: string | null;
   ingredients?: string[];
   created_at: string;
 }
@@ -140,6 +141,7 @@ export interface MealRecipe {
   name: string;
   emoji: string | null;
   recipe_url: string | null;
+  instructions?: string | null;
   ingredients: string[];
 }
 

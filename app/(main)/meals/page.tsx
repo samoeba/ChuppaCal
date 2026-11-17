@@ -8,7 +8,7 @@ import { startOfWeek } from "@/lib/chores";
 
 export const dynamic = "force-dynamic";
 
-const recipeBankMissing = new Error("Recipe bank migration is pending");
+const recipeLibraryPending = new Error("Recipe library migration is pending");
 
 function localDateStr(d: Date): string {
   return toDateParam(d);
@@ -32,16 +32,16 @@ export default async function MealsPage({
       .lte("date", localDateStr(weekEnd)),
     readAllRows<MealRecipe>(async (from, to) => {
       const result = await supabase.from("meal_recipes")
-        .select("id,name,emoji,recipe_url,ingredients")
+        .select("id,name,emoji,recipe_url,ingredients,instructions")
         .eq("family_id", family.id)
         .order("name")
         .order("id")
         .range(from, to);
       // An automatic Vercel deployment can become active while Supabase is being migrated.
-      if (result.error?.code === "PGRST205" || result.error?.code === "42P01") throw recipeBankMissing;
+      if (["PGRST205", "42P01", "42703"].includes(result.error?.code ?? "")) throw recipeLibraryPending;
       return result;
     }).catch((error: unknown) => {
-      if (error === recipeBankMissing) return null;
+      if (error === recipeLibraryPending) return null;
       throw error;
     }),
   ]);

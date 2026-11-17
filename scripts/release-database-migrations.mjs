@@ -87,3 +87,32 @@ if (!recipes.table_exists || !recipes.function_exists || !recipes.family_access_
   throw new Error("Migration 011 is required before deploying the recipe bank");
 }
 console.log("Verified the recipe bank, family access policy, and atomic meal save function.");
+
+const instructionsStatusSql = `
+  select
+    count(*) as columns_present,
+    count(*) filter (where data_type = 'text' and is_nullable = 'YES') = 2 as columns_ready,
+    to_regprocedure('public.cc_set_meal_and_recipe(date,text,text,text,text,text[],text)') is not null as function_exists
+  from information_schema.columns
+  where table_schema = 'public' and table_name in ('meal_recipes', 'meal_plans')
+    and column_name = 'instructions';
+`;
+
+async function instructionsStatus() {
+  const [row] = await runSql(instructionsStatusSql, true);
+  if (typeof row?.columns_ready !== "boolean") {
+    throw new Error("Supabase returned an unexpected response for the recipe instructions check");
+  }
+  return row;
+}
+
+let instructions = await instructionsStatus();
+if (Number(instructions.columns_present) === 0 && !instructions.function_exists && process.env.APPLY_RECIPE_INSTRUCTIONS === "true") {
+  const migration = new URL("../supabase/migrations/012_recipe_instructions.sql", import.meta.url);
+  await runSql(await readFile(migration, "utf8"), false);
+  instructions = await instructionsStatus();
+}
+if (!instructions.columns_ready || !instructions.function_exists) {
+  throw new Error("Migration 012 is required before deploying recipe instructions");
+}
+console.log("Verified instructions on saved recipes and planned meals, and the instruction-aware atomic meal save function.");

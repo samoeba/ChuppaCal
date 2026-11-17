@@ -6,9 +6,10 @@ interface Props {
   selectedRecipe?: MealRecipe;
   onSelect: (id: string) => void;
   disabled: boolean;
+  library?: boolean;
 }
 
-export default function RecipePicker({ recipes, selectedRecipe, onSelect, disabled }: Props) {
+export default function RecipePicker({ recipes, selectedRecipe, onSelect, disabled, library = false }: Props) {
   const [search, setSearch] = useState("");
   const query = search.trim().toLowerCase();
   const matches = recipes.filter((recipe) => recipe.name.toLowerCase().includes(query));
@@ -16,14 +17,14 @@ export default function RecipePicker({ recipes, selectedRecipe, onSelect, disabl
   if (!recipes.length) {
     return (
       <p className="mb-4 rounded-xl bg-cc-cream p-4 text-sm text-cc-ink-dim">
-        Your recipe bank is empty. Choose Custom meal and save it to the recipe bank to get started.
+        {library ? "No saved recipes yet. Add a recipe to get started." : "Your recipe library is empty. Add a recipe from Meals or save a custom meal to the library."}
       </p>
     );
   }
 
   return (
     <fieldset disabled={disabled} className="mb-4 min-w-0">
-      <legend className="sr-only">Choose a saved recipe</legend>
+      <legend className="sr-only">{library ? "Browse saved recipes" : "Choose a saved recipe"}</legend>
       <input
         type="search"
         aria-label="Search recipes"
@@ -58,11 +59,15 @@ export default function RecipePicker({ recipes, selectedRecipe, onSelect, disabl
               {selectedRecipe.ingredients.map((ingredient, index) => <li key={index} className="wrap-break-word">{ingredient}</li>)}
             </ul>
           )}
-          {selectedRecipe.recipe_url && (
+          {selectedRecipe.recipe_url && /^https?:\/\//.test(selectedRecipe.recipe_url) && (
             <a href={selectedRecipe.recipe_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center underline">
               Open recipe ↗
             </a>
           )}
+          <h3 className="mt-3 font-semibold">Instructions</h3>
+          <p className="mt-1 whitespace-pre-wrap wrap-break-word text-cc-ink-dim">
+            {selectedRecipe.instructions || "No instructions saved yet."}
+          </p>
         </div>
       )}
     </fieldset>
