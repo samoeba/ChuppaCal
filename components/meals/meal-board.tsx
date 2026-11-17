@@ -73,12 +73,7 @@ export default function MealBoard({ meals, recipes, mealSlots, familyId, weekSta
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {savedRecipes !== null && <div className="flex justify-end px-4 pt-3">
-        <button onClick={() => setLibraryOpen(true)} className="min-h-11 rounded-xl bg-cc-cream px-4 font-semibold text-cc-ink">
-          Recipe library
-        </button>
-      </div>}
+    <div className="flex h-full flex-col pb-20">
       {libraryOpen && savedRecipes !== null && (
         <RecipeLibrary
           recipes={savedRecipes}
@@ -102,6 +97,14 @@ export default function MealBoard({ meals, recipes, mealSlots, familyId, weekSta
         todayStr={todayStr}
         onCellTap={handleCellTap}
       />
+      {savedRecipes !== null && (
+        <button
+          onClick={() => setLibraryOpen(true)}
+          className="fixed bottom-24 right-4 z-30 min-h-12 rounded-2xl bg-sky px-5 py-3 font-semibold text-white shadow-lg active:opacity-80 md:bottom-6 md:right-6"
+        >
+          Recipe library
+        </button>
+      )}
       {selectedCell && (
         <MealModal
           date={selectedCell.date}
