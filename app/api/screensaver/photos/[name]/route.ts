@@ -1,5 +1,5 @@
 import { requireFamilyContext } from "@/lib/family-context";
-import { SCREENSAVER_BUCKET, SCREENSAVER_PHOTO_TYPES } from "@/lib/screensaver-photos";
+import { SCREENSAVER_BUCKET } from "@/lib/screensaver-photos";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
@@ -8,11 +8,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ nam
   const context = await requireFamilyContext().catch(() => null);
   if (!context) return new Response(null, { status: 401 });
   const { supabase, familyId } = context;
-  const { data, error } = await supabase.storage.from(SCREENSAVER_BUCKET).download(`${familyId}/${name}`);
-  if (error || !data || !SCREENSAVER_PHOTO_TYPES.includes(data.type)) {
+  // Keep the stable image URL: each new request gets a fresh storage link,
+  // so an always-on slideshow never retains an expired signed URL.
+  const { data, error } = await supabase.storage.from(SCREENSAVER_BUCKET)
+    .createSignedUrl(`${familyId}/${name}`, 3600);
+  if (error || !data?.signedUrl) {
     return new Response(null, { status: 404 });
   }
-  return new Response(data.stream(), {
-    headers: { "Content-Type": data.type, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
+  // Only this small redirect passes through Vercel; Supabase serves the bytes.
+  // Do not cache the redirect: membership is verified again on every request.
+  return new Response(null, {
+    status: 307,
+    headers: { Location: data.signedUrl, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
   });
 }
